@@ -2,13 +2,27 @@ import UnoCSS from "unocss/vite";
 import vueJsx from "@vitejs/plugin-vue-jsx";
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
+import AutoImport from "unplugin-auto-import/vite";
+import Components from "unplugin-vue-components/vite";
 
 // @ts-expect-error process is a nodejs global
 const host = process.env.TAURI_DEV_HOST;
 
 // https://vitejs.dev/config/
 export default defineConfig(async () => ({
-  plugins: [UnoCSS(), vue(), vueJsx()],
+  plugins: [
+    UnoCSS(),
+    vue(),
+    vueJsx(),
+    AutoImport({
+      imports: ["vue", "@vueuse/core"],
+      dts: "src/auto-imports.d.ts",
+    }),
+    Components({
+      dirs: ["src/components"],
+      dts: "src/components.d.ts",
+    }),
+  ],
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //
