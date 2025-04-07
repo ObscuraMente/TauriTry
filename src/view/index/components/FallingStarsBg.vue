@@ -50,48 +50,40 @@ let targetFPS = 60; // 目标帧率
 let frameInterval = 1000 / targetFPS; // 每帧的时间间隔
 let lastFrameTime = 0; // 上一帧的时间
 
+// 添加稳定期计数器
+let stabilizationPeriod = 20; // 前20次FPS计算不调整性能模式
+
 onMounted(() => {
-  setTimeout(() => {
-    const canvas = starsCanvas.value;
-    if (!canvas) return;
+  const canvas = starsCanvas.value;
+  if (!canvas) return;
 
-    window.addEventListener("resize", resizeCanvas);
-    resizeCanvas(); // Call it initially to set correct size
-    createOffscreenCanvas(); // 创建离屏画布
+  window.addEventListener("resize", resizeCanvas);
+  resizeCanvas(); // Call it initially to set correct size
+  createOffscreenCanvas(); // 创建离屏画布
 
-    perspective = canvas.width / 2;
-    stars = [];
+  perspective = canvas.width / 2;
+  stars = [];
 
-    // 检测设备性能，根据硬件初始化性能模式
-    checkInitialPerformance();
+  // 检测设备性能，根据硬件初始化性能模式
+  checkInitialPerformance();
 
-    // 根据当前性能模式初始化星星
-    initializeStars();
+  // 根据当前性能模式初始化星星
+  initializeStars();
 
-    // 根据性能模式设置初始帧率
-    updateTargetFPS();
+  // 根据性能模式设置初始帧率
+  updateTargetFPS();
 
-    animate(); // Start animation
-  }, 1);
+  animate(); // Start animation
 });
 
 // 检测设备初始性能并设置合适的性能模式
 function checkInitialPerformance() {
-  // 移动设备默认使用中等质量
-  if (
-    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-      navigator.userAgent
-    )
-  ) {
-    performanceMode = 1;
-  }
+  // 全部默认从高质量开始
+  performanceMode = 0;
 
-  // 低端设备使用低质量
-  if (
-    window.navigator.hardwareConcurrency &&
-    window.navigator.hardwareConcurrency <= 2
-  ) {
-    performanceMode = 2;
+  // 仅在明确是移动设备时降级
+  if (/iPhone|Android.*Mobile/i.test(navigator.userAgent)) {
+    performanceMode = 1;
   }
 }
 
@@ -278,6 +270,12 @@ function animate(currentTime = 0) {
 function adjustPerformance() {
   // 上次的性能模式
   const prevMode = performanceMode;
+
+  // 如果处于稳定期，不调整性能模式
+  if (stabilizationPeriod > 0) {
+    stabilizationPeriod--;
+    return;
+  }
 
   // 性能提升：如果FPS很高并且当前不是高质量模式，提升质量
   if (fps > 55 && performanceMode > 0) {
