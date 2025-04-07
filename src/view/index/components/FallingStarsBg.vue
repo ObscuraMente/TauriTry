@@ -51,26 +51,28 @@ let frameInterval = 1000 / targetFPS; // 每帧的时间间隔
 let lastFrameTime = 0; // 上一帧的时间
 
 onMounted(() => {
-  const canvas = starsCanvas.value;
-  if (!canvas) return;
+  setTimeout(() => {
+    const canvas = starsCanvas.value;
+    if (!canvas) return;
 
-  window.addEventListener("resize", resizeCanvas);
-  resizeCanvas(); // Call it initially to set correct size
-  createOffscreenCanvas(); // 创建离屏画布
+    window.addEventListener("resize", resizeCanvas);
+    resizeCanvas(); // Call it initially to set correct size
+    createOffscreenCanvas(); // 创建离屏画布
 
-  perspective = canvas.width / 2;
-  stars = [];
+    perspective = canvas.width / 2;
+    stars = [];
 
-  // 检测设备性能，根据硬件初始化性能模式
-  checkInitialPerformance();
+    // 检测设备性能，根据硬件初始化性能模式
+    checkInitialPerformance();
 
-  // 根据当前性能模式初始化星星
-  initializeStars();
+    // 根据当前性能模式初始化星星
+    initializeStars();
 
-  // 根据性能模式设置初始帧率
-  updateTargetFPS();
+    // 根据性能模式设置初始帧率
+    updateTargetFPS();
 
-  animate(); // Start animation
+    animate(); // Start animation
+  }, 1);
 });
 
 // 检测设备初始性能并设置合适的性能模式
@@ -189,12 +191,6 @@ function drawStarToContext(star: Star, context: CanvasRenderingContext2D) {
   context.beginPath();
   context.arc(x2d, y2d, size / 4, 0, Math.PI * 2);
   context.fill();
-}
-
-// 保留原始drawStar函数作为兼容层，调用新函数
-function drawStar(star: Star) {
-  if (!ctx) return;
-  drawStarToContext(star, ctx);
 }
 
 // Function to animate the stars
