@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import FallingStarsBg from "./components/FallingStarsBg.vue";
+import FallingStarsBg from "./components/FallingStarsBg/index.vue";
 import { useColorMode } from "@vueuse/core";
 import { Dock, DockIcon, DockSeparator } from "./components/Dock";
 

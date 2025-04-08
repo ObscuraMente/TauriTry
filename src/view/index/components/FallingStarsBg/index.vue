@@ -7,8 +7,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, onBeforeUnmount, nextTick } from "vue";
-import { cn } from "../../../lib/utils";
+import { cn } from "../../../../lib/utils";
 
 interface Star {
   x: number;
@@ -33,6 +32,7 @@ const starsCanvas = ref<HTMLCanvasElement | null>(null);
 let perspective: number = 0;
 let stars: Star[] = [];
 let ctx: CanvasRenderingContext2D | null = null;
+let starWorker: Worker | null = null;
 
 // 添加缓存画布相关变量
 let offscreenCanvas: HTMLCanvasElement | null = null;
@@ -59,34 +59,29 @@ let dpr = 1; // 设备像素比
 let resizeObserver: ResizeObserver | null = null;
 
 onMounted(() => {
-  // 直接初始化，不使用nextTick延迟
   const canvas = starsCanvas.value;
   if (!canvas) return;
 
-  // 获取设备像素比
   dpr = window.devicePixelRatio || 1;
-
-  // 添加监听器
   window.addEventListener("resize", resizeCanvas);
   resizeObserver = new ResizeObserver(() => resizeCanvas());
   resizeObserver.observe(canvas);
-
-  // 立即设置初始尺寸
   setInitialCanvasSize();
-
-  // 立即开始动画 - 不等待其他操作
   animate();
 });
 
 onBeforeUnmount(() => {
-  // 清理ResizeObserver
   if (resizeObserver && starsCanvas.value) {
     resizeObserver.unobserve(starsCanvas.value);
     resizeObserver.disconnect();
   }
-
-  // 清理事件监听
   window.removeEventListener("resize", resizeCanvas);
+
+  // 终止 Worker
+  if (starWorker) {
+    starWorker.terminate();
+    starWorker = null;
+  }
 });
 
 // 检测设备初始性能并设置合适的性能模式
@@ -202,67 +197,66 @@ function drawStarToContext(star: Star, context: CanvasRenderingContext2D) {
   context.fill();
 }
 
-// Function to animate the stars
+// 初始化 Web Worker
+function initWorker() {
+  starWorker = new Worker(new URL("./starWorker.ts", import.meta.url), {
+    type: "module",
+  });
+
+  starWorker.onmessage = (e) => {
+    if (e.data.type === "update") {
+      stars = e.data.stars;
+      console.log("接收到Worker更新：星星数量", stars.length);
+    }
+  };
+}
+
+// 修改 animate 函数
 function animate(currentTime = 0) {
   const canvas = starsCanvas.value;
   if (!canvas) return;
 
-  // 请求下一帧动画
   requestAnimationFrame(animate);
 
-  // 如果尚未初始化，先初始化
   if (stars.length === 0) {
     setInitialCanvasSize();
     return;
   }
 
-  // 帧率限制
   const elapsed = currentTime - lastFrameTime;
   if (elapsed < frameInterval) {
-    // 如果距离上一帧的时间小于帧间隔，则跳过这一帧
     return;
   }
 
-  // 更新上一帧时间（使用实际的帧间隔而不是理论值，避免累积误差）
   lastFrameTime = currentTime - (elapsed % frameInterval);
 
-  // 确保ctx存在
   if (!ctx) {
     ctx = canvas.getContext("2d");
     if (ctx) ctx.scale(dpr, dpr);
     if (!ctx) return;
   }
 
-  // 确保offscreenCanvas和offscreenCtx已经创建
   if (!offscreenCanvas || !offscreenCtx) {
     createOffscreenCanvas();
     if (!offscreenCtx) return;
   }
 
-  // 安全处理：确保offscreenCanvas确实存在
   const safeOffscreenCanvas = offscreenCanvas as HTMLCanvasElement;
   const safeOffscreenCtx = offscreenCtx as CanvasRenderingContext2D;
 
-  // 计算FPS
   frames++;
   if (currentTime - lastFpsUpdate >= fpsUpdateInterval) {
     fps = Math.round((frames * 1000) / (currentTime - lastFpsUpdate));
     console.log(`当前FPS: ${fps}, 性能模式: ${performanceMode}`);
     lastFpsUpdate = currentTime;
     frames = 0;
-
-    // 根据FPS动态调整性能
     adjustPerformance();
   }
 
-  // 如果性能模式改变或初次绘制，执行完全重绘
   if (needsFullRedraw) {
-    // 清空离屏画布
     safeOffscreenCtx.clearRect(0, 0, canvas.width, canvas.height);
     needsFullRedraw = false;
   } else {
-    // 在离屏画布上应用半透明白色层，创建淡出效果而不是完全清除
-    // 透明度根据性能模式调整，低性能模式使用更高透明度（更明显的拖尾效果）
     let fadeAlpha = 0.2;
     if (performanceMode === 1) fadeAlpha = 0.15;
     if (performanceMode === 2) fadeAlpha = 0.1;
@@ -271,25 +265,27 @@ function animate(currentTime = 0) {
     safeOffscreenCtx.fillRect(0, 0, canvas.width, canvas.height);
   }
 
-  // 在离屏画布上绘制所有星星
+  // 发送更新消息给 Worker
+  if (starWorker) {
+    starWorker.postMessage({ type: "update" });
+  } else {
+    stars.forEach((star) => {
+      const speedFactor = 60 / targetFPS;
+      star.z -= star.speed * speedFactor;
+
+      if (star.z <= 0) {
+        star.z = canvas.width;
+        star.x = (Math.random() - 0.5) * 2 * canvas.width;
+        star.y = (Math.random() - 0.5) * 2 * canvas.height;
+      }
+    });
+  }
+
+  // 绘制星星
   stars.forEach((star) => {
-    // 使用offscreenCtx而不是ctx
     drawStarToContext(star, safeOffscreenCtx);
-
-    // Move star towards the screen (decrease z)
-    // 根据帧率调整移动速度，保持视觉一致性
-    const speedFactor = 60 / targetFPS;
-    star.z -= star.speed * speedFactor;
-
-    // Reset star when it reaches the viewer (z = 0)
-    if (star.z <= 0) {
-      star.z = canvas.width;
-      star.x = (Math.random() - 0.5) * 2 * canvas.width;
-      star.y = (Math.random() - 0.5) * 2 * canvas.height;
-    }
   });
 
-  // 清空主画布并将离屏画布内容复制到主画布
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.drawImage(safeOffscreenCanvas, 0, 0);
 }
@@ -325,49 +321,60 @@ function adjustPerformance() {
   }
 }
 
-// 设置初始Canvas尺寸的特殊函数
+// 修改 setInitialCanvasSize 函数
 function setInitialCanvasSize() {
   const canvas = starsCanvas.value;
   if (!canvas) return;
 
-  // 获取父容器
   const parent = canvas.parentElement;
   if (!parent) return;
 
-  // 获取父容器尺寸
   const parentWidth = parent.clientWidth || window.innerWidth;
   const parentHeight = parent.clientHeight || window.innerHeight;
 
-  // 强制设置CSS样式确保占满
   canvas.style.width = `${parentWidth}px`;
   canvas.style.height = `${parentHeight}px`;
 
-  // 设置物理像素
   canvas.width = Math.floor(parentWidth * dpr);
   canvas.height = Math.floor(parentHeight * dpr);
 
-  // 调整上下文缩放
   ctx = canvas.getContext("2d");
   if (ctx) {
     ctx.scale(dpr, dpr);
   }
 
-  // 创建离屏画布
   createOffscreenCanvas();
-
-  // 设置透视并初始化星星
   perspective = canvas.width / (2 * dpr);
-
-  // 检测设备性能，根据硬件初始化性能模式
   checkInitialPerformance();
-
-  // 初始化星星
   initializeStars();
-
-  // 设置帧率
   updateTargetFPS();
 
-  // 标记需要重绘
+  try {
+    // 初始化 Worker
+    if (!starWorker) {
+      initWorker();
+    }
+
+    // 发送初始化消息给 Worker
+    if (starWorker) {
+      starWorker.postMessage({
+        type: "init",
+        data: {
+          stars,
+          canvasWidth: canvas.width,
+          canvasHeight: canvas.height,
+          dpr,
+          performanceMode,
+        },
+      });
+      console.log("发送初始化消息给Worker：星星数量", stars.length);
+    }
+  } catch (error) {
+    console.error("初始化Worker失败:", error);
+    // 如果Worker初始化失败，使用默认方式
+    starWorker = null;
+  }
+
   needsFullRedraw = true;
 }
 
