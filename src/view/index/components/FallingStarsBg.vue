@@ -2,11 +2,12 @@
   <canvas
     ref="starsCanvas"
     :class="cn('absolute inset-0 w-full h-full', $props.class)"
+    style="width: 100%; height: 100%; position: absolute; left: 0; top: 0"
   ></canvas>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { onMounted, ref, onBeforeUnmount, nextTick } from "vue";
 import { cn } from "../../../lib/utils";
 
 interface Star {
@@ -51,29 +52,62 @@ let frameInterval = 1000 / targetFPS; // 每帧的时间间隔
 let lastFrameTime = 0; // 上一帧的时间
 
 // 添加稳定期计数器
-let stabilizationPeriod = 20; // 前20次FPS计算不调整性能模式
+let stabilizationPeriod = 100; // 前20次FPS计算不调整性能模式
+
+// 添加DPR变量
+let dpr = 1; // 设备像素比
+let resizeObserver: ResizeObserver | null = null;
 
 onMounted(() => {
-  const canvas = starsCanvas.value;
-  if (!canvas) return;
+  // 使用nextTick确保DOM已完全渲染
+  nextTick(async () => {
+    const canvas = starsCanvas.value;
+    if (!canvas) return;
 
-  window.addEventListener("resize", resizeCanvas);
-  resizeCanvas(); // Call it initially to set correct size
-  createOffscreenCanvas(); // 创建离屏画布
+    // 获取设备像素比
+    dpr = window.devicePixelRatio || 1;
 
-  perspective = canvas.width / 2;
-  stars = [];
+    // 创建ResizeObserver监听Canvas尺寸变化
+    resizeObserver = new ResizeObserver((entries) => {
+      if (entries.length > 0) {
+        resizeCanvas();
+      }
+    });
+    resizeObserver.observe(canvas);
 
-  // 检测设备性能，根据硬件初始化性能模式
-  checkInitialPerformance();
+    // 添加window resize事件监听
+    window.addEventListener("resize", resizeCanvas);
 
-  // 根据当前性能模式初始化星星
-  initializeStars();
+    // 确保初始尺寸正确，使用多种方法
+    await setInitialCanvasSize();
 
-  // 根据性能模式设置初始帧率
-  updateTargetFPS();
+    // 初始化画布
+    perspective = canvas.width / (2 * dpr);
+    stars = [];
 
-  animate(); // Start animation
+    // 检测设备性能，根据硬件初始化性能模式
+    checkInitialPerformance();
+
+    // 根据当前性能模式初始化星星
+    initializeStars();
+
+    // 根据性能模式设置初始帧率
+    updateTargetFPS();
+
+    // 开始动画
+    animate();
+  });
+});
+
+onBeforeUnmount(() => {
+  // 清理ResizeObserver
+  if (resizeObserver && starsCanvas.value) {
+    resizeObserver.unobserve(starsCanvas.value);
+    resizeObserver.disconnect();
+  }
+
+  // 清理事件监听
+  window.removeEventListener("resize", resizeCanvas);
 });
 
 // 检测设备初始性能并设置合适的性能模式
@@ -158,15 +192,19 @@ function drawStarToContext(star: Star, context: CanvasRenderingContext2D) {
   const canvas = starsCanvas.value;
   if (!canvas) return;
 
+  // 使用CSS像素计算位置（除以dpr）
+  const canvasWidth = canvas.width / dpr;
+  const canvasHeight = canvas.height / dpr;
+
   const scale = perspective / (perspective + star.z); // 3D perspective scale
-  const x2d = canvas.width / 2 + star.x * scale;
-  const y2d = canvas.height / 2 + star.y * scale;
+  const x2d = canvasWidth / 2 + star.x * scale;
+  const y2d = canvasHeight / 2 + star.y * scale;
   const size = Math.max(scale * 2, 0.5); // 减小尺寸
 
   // Previous position for a trail effect
   const prevScale = perspective / (perspective + star.z + star.speed * 8); // 缩短轨迹长度
-  const xPrev = canvas.width / 2 + star.x * prevScale;
-  const yPrev = canvas.height / 2 + star.y * prevScale;
+  const xPrev = canvasWidth / 2 + star.x * prevScale;
+  const yPrev = canvasHeight / 2 + star.y * prevScale;
 
   const rgb = hexToRgb();
 
@@ -220,6 +258,7 @@ function animate(currentTime = 0) {
   frames++;
   if (currentTime - lastFpsUpdate >= fpsUpdateInterval) {
     fps = Math.round((frames * 1000) / (currentTime - lastFpsUpdate));
+    console.log(`当前FPS: ${fps}, 性能模式: ${performanceMode}`);
     lastFpsUpdate = currentTime;
     frames = 0;
 
@@ -297,13 +336,109 @@ function adjustPerformance() {
   }
 }
 
+// 设置初始Canvas尺寸的特殊函数
+async function setInitialCanvasSize() {
+  const canvas = starsCanvas.value;
+  if (!canvas) return;
+
+  // 获取父容器
+  const parent = canvas.parentElement;
+  if (!parent) return;
+
+  // 方法1：使用父容器尺寸
+  const setCanvasSizeFromParent = () => {
+    const parentWidth = parent.clientWidth || window.innerWidth;
+    const parentHeight = parent.clientHeight || window.innerHeight;
+
+    // 强制设置CSS样式确保占满
+    canvas.style.width = `${parentWidth}px`;
+    canvas.style.height = `${parentHeight}px`;
+
+    // 设置物理像素
+    canvas.width = Math.floor(parentWidth * dpr);
+    canvas.height = Math.floor(parentHeight * dpr);
+
+    // 调整上下文缩放
+    const context = canvas.getContext("2d");
+    if (context) {
+      context.scale(dpr, dpr);
+    }
+
+    console.log(
+      `Canvas尺寸设置为: ${canvas.width}x${canvas.height}, CSS: ${parentWidth}x${parentHeight}`
+    );
+  };
+
+  // 立即设置一次
+  setCanvasSizeFromParent();
+
+  // 等待100ms后再设置一次
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  setCanvasSizeFromParent();
+
+  // 等待500ms后再最后设置一次
+  await new Promise((resolve) => setTimeout(resolve, 400));
+  setCanvasSizeFromParent();
+
+  // 创建离屏画布
+  createOffscreenCanvas();
+
+  // 标记需要重绘
+  needsFullRedraw = true;
+}
+
 // Set canvas to full screen
 function resizeCanvas() {
   const canvas = starsCanvas.value;
   if (!canvas) return;
 
-  canvas.width = canvas.clientWidth;
-  canvas.height = canvas.clientHeight;
+  const parent = canvas.parentElement;
+  if (!parent) return;
+
+  // 获取父容器实际尺寸
+  const parentWidth = parent.clientWidth || window.innerWidth;
+  const parentHeight = parent.clientHeight || window.innerHeight;
+
+  // 保存当前的canvas内容
+  const tempCanvas = document.createElement("canvas");
+  const tempCtx = tempCanvas.getContext("2d");
+  if (tempCtx && ctx) {
+    tempCanvas.width = canvas.width;
+    tempCanvas.height = canvas.height;
+    tempCtx.drawImage(canvas, 0, 0);
+  }
+
+  // 获取设备像素比
+  dpr = window.devicePixelRatio || 1;
+
+  // 设置CSS尺寸
+  canvas.style.width = `${parentWidth}px`;
+  canvas.style.height = `${parentHeight}px`;
+
+  // 设置Canvas的实际尺寸（物理像素）
+  canvas.width = Math.floor(parentWidth * dpr);
+  canvas.height = Math.floor(parentHeight * dpr);
+
+  // 获取新的上下文并适应设备像素比
+  ctx = canvas.getContext("2d");
+  if (ctx) {
+    ctx.scale(dpr, dpr);
+  }
+
+  // 重新绘制之前的内容（如果有）
+  if (tempCtx && ctx) {
+    ctx.drawImage(
+      tempCanvas,
+      0,
+      0,
+      tempCanvas.width,
+      tempCanvas.height,
+      0,
+      0,
+      parentWidth,
+      parentHeight
+    );
+  }
 
   // 重新创建缓存画布
   createOffscreenCanvas();
@@ -317,10 +452,15 @@ function createOffscreenCanvas() {
   const canvas = starsCanvas.value;
   if (!canvas) return;
 
-  // 创建与主画布相同大小的离屏画布
+  // 创建与主画布相同物理尺寸的离屏画布
   offscreenCanvas = document.createElement("canvas");
   offscreenCanvas.width = canvas.width;
   offscreenCanvas.height = canvas.height;
   offscreenCtx = offscreenCanvas.getContext("2d");
+
+  // 适应设备像素比
+  if (offscreenCtx) {
+    offscreenCtx.scale(dpr, dpr);
+  }
 }
 </script>
