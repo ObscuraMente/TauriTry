@@ -59,44 +59,23 @@ let dpr = 1; // 设备像素比
 let resizeObserver: ResizeObserver | null = null;
 
 onMounted(() => {
-  // 使用nextTick确保DOM已完全渲染
-  nextTick(async () => {
-    const canvas = starsCanvas.value;
-    if (!canvas) return;
+  // 直接初始化，不使用nextTick延迟
+  const canvas = starsCanvas.value;
+  if (!canvas) return;
 
-    // 获取设备像素比
-    dpr = window.devicePixelRatio || 1;
+  // 获取设备像素比
+  dpr = window.devicePixelRatio || 1;
 
-    // 创建ResizeObserver监听Canvas尺寸变化
-    resizeObserver = new ResizeObserver((entries) => {
-      if (entries.length > 0) {
-        resizeCanvas();
-      }
-    });
-    resizeObserver.observe(canvas);
+  // 添加监听器
+  window.addEventListener("resize", resizeCanvas);
+  resizeObserver = new ResizeObserver(() => resizeCanvas());
+  resizeObserver.observe(canvas);
 
-    // 添加window resize事件监听
-    window.addEventListener("resize", resizeCanvas);
+  // 立即设置初始尺寸
+  setInitialCanvasSize();
 
-    // 确保初始尺寸正确，使用多种方法
-    await setInitialCanvasSize();
-
-    // 初始化画布
-    perspective = canvas.width / (2 * dpr);
-    stars = [];
-
-    // 检测设备性能，根据硬件初始化性能模式
-    checkInitialPerformance();
-
-    // 根据当前性能模式初始化星星
-    initializeStars();
-
-    // 根据性能模式设置初始帧率
-    updateTargetFPS();
-
-    // 开始动画
-    animate();
-  });
+  // 立即开始动画 - 不等待其他操作
+  animate();
 });
 
 onBeforeUnmount(() => {
@@ -231,6 +210,12 @@ function animate(currentTime = 0) {
   // 请求下一帧动画
   requestAnimationFrame(animate);
 
+  // 如果尚未初始化，先初始化
+  if (stars.length === 0) {
+    setInitialCanvasSize();
+    return;
+  }
+
   // 帧率限制
   const elapsed = currentTime - lastFrameTime;
   if (elapsed < frameInterval) {
@@ -241,8 +226,12 @@ function animate(currentTime = 0) {
   // 更新上一帧时间（使用实际的帧间隔而不是理论值，避免累积误差）
   lastFrameTime = currentTime - (elapsed % frameInterval);
 
-  ctx = canvas.getContext("2d");
-  if (!ctx) return;
+  // 确保ctx存在
+  if (!ctx) {
+    ctx = canvas.getContext("2d");
+    if (ctx) ctx.scale(dpr, dpr);
+    if (!ctx) return;
+  }
 
   // 确保offscreenCanvas和offscreenCtx已经创建
   if (!offscreenCanvas || !offscreenCtx) {
@@ -337,7 +326,7 @@ function adjustPerformance() {
 }
 
 // 设置初始Canvas尺寸的特殊函数
-async function setInitialCanvasSize() {
+function setInitialCanvasSize() {
   const canvas = starsCanvas.value;
   if (!canvas) return;
 
@@ -345,43 +334,38 @@ async function setInitialCanvasSize() {
   const parent = canvas.parentElement;
   if (!parent) return;
 
-  // 方法1：使用父容器尺寸
-  const setCanvasSizeFromParent = () => {
-    const parentWidth = parent.clientWidth || window.innerWidth;
-    const parentHeight = parent.clientHeight || window.innerHeight;
+  // 获取父容器尺寸
+  const parentWidth = parent.clientWidth || window.innerWidth;
+  const parentHeight = parent.clientHeight || window.innerHeight;
 
-    // 强制设置CSS样式确保占满
-    canvas.style.width = `${parentWidth}px`;
-    canvas.style.height = `${parentHeight}px`;
+  // 强制设置CSS样式确保占满
+  canvas.style.width = `${parentWidth}px`;
+  canvas.style.height = `${parentHeight}px`;
 
-    // 设置物理像素
-    canvas.width = Math.floor(parentWidth * dpr);
-    canvas.height = Math.floor(parentHeight * dpr);
+  // 设置物理像素
+  canvas.width = Math.floor(parentWidth * dpr);
+  canvas.height = Math.floor(parentHeight * dpr);
 
-    // 调整上下文缩放
-    const context = canvas.getContext("2d");
-    if (context) {
-      context.scale(dpr, dpr);
-    }
-
-    console.log(
-      `Canvas尺寸设置为: ${canvas.width}x${canvas.height}, CSS: ${parentWidth}x${parentHeight}`
-    );
-  };
-
-  // 立即设置一次
-  setCanvasSizeFromParent();
-
-  // 等待100ms后再设置一次
-  await new Promise((resolve) => setTimeout(resolve, 100));
-  setCanvasSizeFromParent();
-
-  // 等待500ms后再最后设置一次
-  await new Promise((resolve) => setTimeout(resolve, 400));
-  setCanvasSizeFromParent();
+  // 调整上下文缩放
+  ctx = canvas.getContext("2d");
+  if (ctx) {
+    ctx.scale(dpr, dpr);
+  }
 
   // 创建离屏画布
   createOffscreenCanvas();
+
+  // 设置透视并初始化星星
+  perspective = canvas.width / (2 * dpr);
+
+  // 检测设备性能，根据硬件初始化性能模式
+  checkInitialPerformance();
+
+  // 初始化星星
+  initializeStars();
+
+  // 设置帧率
+  updateTargetFPS();
 
   // 标记需要重绘
   needsFullRedraw = true;
