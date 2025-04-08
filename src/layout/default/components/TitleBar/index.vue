@@ -1,8 +1,9 @@
 <script setup>
 import { ref, watch } from "vue";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 
-const appWindow = getCurrentWindow();
+import { Window } from "@tauri-apps/api/window";
+
+const appWindow = new Window("main");
 const max_state_name = ref("window-maximize");
 const max_state = ref(false);
 

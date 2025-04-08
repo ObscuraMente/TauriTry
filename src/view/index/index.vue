@@ -29,6 +29,12 @@ import { Dock, DockIcon, DockSeparator } from "./components/Dock";
           <DockIcon>
             <div class="size-full i-logos-adobe-illustrator" />
           </DockIcon>
+          <DockIcon>
+            <div class="size-full i-logos-adobe-xd" />
+          </DockIcon>
+          <DockIcon>
+            <div class="size-full i-logos-adobe-lightroom" />
+          </DockIcon>
         </Dock>
       </div>
     </div>
