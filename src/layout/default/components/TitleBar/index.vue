@@ -1,7 +1,7 @@
 <script setup>
 import { ref, watch } from "vue";
-
 import { Window } from "@tauri-apps/api/window";
+import pkg from "@/../package.json";
 
 const appWindow = new Window("main");
 const max_state_name = ref("window-maximize");
@@ -37,7 +37,9 @@ async function window_close() {
     data-tauri-drag-region
   >
     <div class="flex-1 h-full flex items-center pl-10px">
-      <div class="text-12px text-text select-none">Tauri App</div>
+      <div class="text-12px text-text select-none">
+        {{ pkg.name }} {{ pkg.version }}
+      </div>
     </div>
     <div class="flex" style="-webkit-app-region: no-drag">
       <button
