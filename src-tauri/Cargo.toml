@@ -1,52 +1,51 @@
-# 包的基本信息配置
+# 包的基本信息
 [package]
 name = "tauri-app"           # 项目名称
 version = "0.1.0"            # 项目版本
 description = "A Tauri App"  # 项目描述
 authors = ["you"]            # 作者信息
-edition = "2021"             # Rust 版本，使用 2021 版本
+edition = "2021"             # Rust 版本
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-# 库配置部分
+# 库配置
 [lib]
 # _lib 后缀看起来可能多余，但它是必要的
 # 用于确保库名称唯一，避免与二进制名称冲突
 # 这个问题主要在 Windows 上出现，详见 https://github.com/rust-lang/cargo/issues/8519
-name = "tauri_app_lib"       # 库的名称
+name = "tauri_app_lib"       # 库名称
 # 指定生成的库类型：
 crate-type = [
-    "staticlib",  # 静态库，用于静态链接
-    "cdylib",     # 动态库，用于动态链接
-    "rlib"        # Rust 库，用于 Rust 代码链接
+    "staticlib",  # 静态库
+    "cdylib",     # 动态库
+    "rlib"        # Rust 库
 ]
 
-# 构建依赖配置
+# 构建依赖
 [build-dependencies]
 # tauri-build 用于构建 Tauri 应用
 # version = "2" 表示使用 Tauri 2.0 版本
-tauri-build = { version = "2", features = [] }
+tauri-build = { version = "2", features = [] }  # Tauri 构建工具
 
-# 项目依赖配置
+# 项目依赖
 [dependencies]
 # Tauri 核心库，version = "2" 表示使用 Tauri 2.0
-tauri = { version = "2", features = [] }
+tauri = { version = "2", features = ["tray-icon"] }        # Tauri 核心库
 # Tauri 文件打开插件，用于处理文件打开操作
-tauri-plugin-opener = "2"
+tauri-plugin-opener = "2"                       # 文件打开插件
 # serde 用于序列化和反序列化
-serde = { version = "1", features = ["derive"] }
+serde = { version = "1", features = ["derive"] } # 序列化/反序列化
 # serde_json 用于 JSON 处理
-serde_json = "1"
+serde_json = "1"                                # JSON 处理
 
 # 开发环境配置
 [profile.dev]
-incremental = true  # 启用增量编译，加快开发时的编译速度
+incremental = true  # 启用增量编译
 
 # 发布环境配置
 [profile.release]
-codegen-units = 1   # 设置为 1 允许 LLVM 执行更好的优化
-lto = true          # 启用链接时优化，提高性能
-opt-level = "s"     # 优化级别：'s' 优先考虑二进制文件大小
-                    # 如果需要更好的性能，可以设置为 '3'
-panic = "abort"     # 禁用 panic 处理程序以提高性能
-strip = true        # 移除调试符号，减小二进制文件大小
+codegen-units = 1   # 优化编译
+lto = true          # 链接时优化
+opt-level = "s"     # 优化级别：'s'=大小优先，'3'=性能优先
+panic = "abort"     # 禁用 panic 处理
+strip = true        # 移除调试符号
