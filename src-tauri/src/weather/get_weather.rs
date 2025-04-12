@@ -136,15 +136,3 @@ pub async fn get_weather() -> Result<WeatherData, String> {
     );
     Ok(weather_data)
 }
-
-// 前端可以直接获取格式化的天气字符串
-#[command]
-pub async fn get_weather_text() -> String {
-    match get_weather().await {
-        Ok(data) => format!(
-            "{}  {}  {}  {}℃",
-            data.province, data.city, data.weather, data.temperature
-        ),
-        Err(e) => format!("天气获取失败: {}", e),
-    }
-}
