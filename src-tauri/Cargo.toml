@@ -30,7 +30,7 @@ tauri-build = { version = "2", features = [] }  # Tauri 构建工具
 # 项目依赖
 [dependencies]
 # Tauri 核心库，version = "2" 表示使用 Tauri 2.0
-tauri = { version = "2", features = ["tray-icon"] }        # Tauri 核心库
+tauri = { version = "2", features = ["tray-icon", "config-json5"] }        # Tauri 核心库
 # Tauri 文件打开插件，用于处理文件打开操作
 tauri-plugin-opener = "2"                       # 文件打开插件
 # serde 用于序列化和反序列化
