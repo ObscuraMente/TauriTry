@@ -35,10 +35,12 @@
         title: "tauri-app",
 
         // 窗口宽度（像素）
-        width: 800,
+        width: 900,
+        minWidth: 900,
 
         // 窗口高度（像素）
         height: 600,
+        minHeight: 600,
 
         // 是否显示窗口装饰（如标题栏、边框等），false 表示无边框窗口
         decorations: false,
