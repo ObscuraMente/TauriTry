@@ -4,20 +4,12 @@ import { Dock, DockIcon, DockSeparator } from "./components/Dock";
 
 <template>
   <div select-none h-full flex overflow-hidden box-border flex-1>
-    <div
-      flex-1
-      rounded-lg
-      flex
-      flex-col
-      justify-between
-      class="bg-[rgba(0,0,0,0.01)]"
-      p-4
-    >
-      <div>123</div>
+    <div flex-1 rounded-lg flex flex-col justify-between p-4>
+      <div flex-1 z-999 rounded-lg p-2 class="bg-[rgba(0,0,0,0.1)]">123</div>
       <div flex items-center justify-center>
-        <Dock mb-5 :magnification="30">
+        <Dock :magnification="30">
           <DockIcon>
-            <div class="size-full i-logos-adobe-after-effects" />
+            <div class="size-full i-unjs-ufo" />
           </DockIcon>
           <DockSeparator />
           <DockIcon>
