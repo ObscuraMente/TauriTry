@@ -25,23 +25,23 @@ const isDark = computed(() => useColorMode().value == "dark");
         <div flex items-center justify-center>
           <Dock :magnification="30">
             <DockIcon>
-              <div class="size-full i-unjs-ufo" />
+              <div class="size-90% i-unjs-ufo" />
             </DockIcon>
             <DockSeparator />
             <DockIcon>
-              <div class="size-full i-logos-adobe-photoshop" />
+              <div class="size-90% i-logos-adobe-photoshop" />
             </DockIcon>
             <DockIcon>
-              <div class="size-full i-logos-adobe-premiere" />
+              <div class="size-90% i-logos-adobe-premiere" />
             </DockIcon>
             <DockIcon>
-              <div class="size-full i-logos-adobe-illustrator" />
+              <div class="size-90% i-logos-adobe-illustrator" />
             </DockIcon>
             <DockIcon>
-              <div class="size-full i-logos-adobe-xd" />
+              <div class="size-90% i-logos-adobe-xd" />
             </DockIcon>
             <DockIcon>
-              <div class="size-full i-logos-adobe-lightroom" />
+              <div class="size-90% i-logos-adobe-lightroom" />
             </DockIcon>
           </Dock>
         </div>
