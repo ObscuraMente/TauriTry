@@ -2,7 +2,7 @@
 import { ref, watch } from "vue";
 import { Window } from "@tauri-apps/api/window";
 import pkg from "@/../package.json";
-
+import Weather from "./components/weather.vue";
 const appWindow = new Window("main");
 const max_state_name = ref("window-maximize");
 const max_state = ref(false);
@@ -40,7 +40,10 @@ async function window_close() {
       <div class="text-12px text-text select-none">
         {{ pkg.name }} {{ pkg.version }}
       </div>
+
+      <Weather />
     </div>
+
     <div class="flex" style="-webkit-app-region: no-drag">
       <button
         class="w-35px h-35px flex items-center justify-center bg-transparent border-none text-text cursor-pointer transition-colors hover:bg-black/10 dark:hover:bg-white/10"

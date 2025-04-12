@@ -37,6 +37,9 @@ tauri-plugin-opener = "2"                       # 文件打开插件
 serde = { version = "1", features = ["derive"] } # 序列化/反序列化
 # serde_json 用于 JSON 处理
 serde_json = "1"                                # JSON 处理
+reqwest = { version = "0.12", features = ["json"] }
+tokio = { version = "1", features = ["full"] }
+once_cell = "1.18.0"
 
 # 开发环境配置
 [profile.dev]
