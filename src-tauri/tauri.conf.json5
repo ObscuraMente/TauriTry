@@ -45,10 +45,12 @@
         // 是否显示窗口装饰（如标题栏、边框等），false 表示无边框窗口
         decorations: false,
 
+        // 设置窗口初始状态为隐藏，让插件先加载位置和大小
+        visible: false,
+
         // 其他可选窗口配置:
         // resizable: true,       // 是否可调整大小
         // fullscreen: false,     // 是否全屏显示
-        // visible: true,         // 初始是否可见
         // center: true,          // 是否居中显示
         // transparent: false,    // 是否透明背景
         // alwaysOnTop: false,    // 是否始终置顶
