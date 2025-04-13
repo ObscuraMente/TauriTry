@@ -41,6 +41,7 @@ reqwest = { version = "0.12", features = ["json"] }
 tokio = { version = "1", features = ["full"] }
 once_cell = "1.18.0" 
 tauri-plugin-single-instance = "2.0.0" #单例插件
+tauri-plugin-window-state = "2.0.0" #保存窗口位置和大小，并在应用程序重新打开时恢复它们
 
 
 
