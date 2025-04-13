@@ -133,6 +133,9 @@
       dialog: true, // 是否显示更新对话框
       endpoints: ["https://tauriupdate.jiang.in/update.json"], // 更新服务器端点
       pubkey: "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDJERTg5QjE4MUQ2M0MwQkYKUldTL3dHTWRHSnZvTFdPRW8yUFRxZmdLQ1YwN3VOdWNNS0ZuRHJ3UjJYQk1LOG5pYW4vSm00R28K", // 更新签名公钥
+      windows: {
+        installMode: "passive",
+      },
     },
     //   // 启动页配置
     //   splashscreen: {

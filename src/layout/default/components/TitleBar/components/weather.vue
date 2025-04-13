@@ -10,9 +10,7 @@ interface Weather {
 
 const weather = ref<Weather>();
 async function getWeather() {
-  // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
   const res = await invoke("get_weather");
-  console.log(res);
   weather.value = res as Weather;
 }
 

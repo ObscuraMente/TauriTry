@@ -3,6 +3,7 @@ mod api;
 
 use api::get_weather; //获取Ip地址的天气
 use tauri::{AppHandle, Manager};
+use tauri_plugin_updater::UpdaterExt;
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -16,6 +17,13 @@ pub fn run() {
             #[cfg(desktop)]
             app.handle()
                 .plugin(tauri_plugin_updater::Builder::new().build())?;
+            let handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                match update(handle).await {
+                    Ok(_) => println!("更新检查完成"),
+                    Err(e) => eprintln!("更新检查失败: {}", e),
+                }
+            });
             Ok(())
         })
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
@@ -43,4 +51,29 @@ fn show_window(app: &AppHandle) {
 
     // 设置焦点
     let _ = window.set_focus().expect("Can't Bring Window to Focus");
+}
+
+// 添加更新函数
+async fn update(app: tauri::AppHandle) -> tauri_plugin_updater::Result<()> {
+    if let Some(update) = app.updater()?.check().await? {
+        let mut downloaded = 0;
+
+        // alternatively we could also call update.download() and update.install() separately
+        update
+            .download_and_install(
+                |chunk_length, content_length| {
+                    downloaded += chunk_length;
+                    println!("downloaded {downloaded} from {content_length:?}");
+                },
+                || {
+                    println!("download finished");
+                },
+            )
+            .await?;
+
+        println!("update installed");
+        app.restart();
+    }
+
+    Ok(())
 }
