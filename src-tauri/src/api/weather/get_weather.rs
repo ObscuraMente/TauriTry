@@ -1,4 +1,4 @@
-use crate::network::http_client;
+use crate::api::network::http_client;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::env;

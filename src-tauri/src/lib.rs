@@ -1,6 +1,7 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-mod network;
-mod weather;
+mod api;
+
+use api::get_weather; //获取Ip地址的天气
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -11,10 +12,7 @@ fn greet(name: &str) -> String {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![
-            greet,
-            weather::get_weather::get_weather
-        ])
+        .invoke_handler(tauri::generate_handler![greet, get_weather])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
