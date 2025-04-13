@@ -43,7 +43,7 @@ pub async fn get<T: DeserializeOwned>(url: &str) -> Result<T, ApiError> {
     }
 }
 
-pub async fn post<T: DeserializeOwned, B: serde::Serialize>(
+pub async fn _post<T: DeserializeOwned, B: serde::Serialize>(
     url: &str,
     body: &B,
 ) -> Result<T, ApiError> {
@@ -53,7 +53,7 @@ pub async fn post<T: DeserializeOwned, B: serde::Serialize>(
     Ok(data)
 }
 
-pub async fn get_with_headers<T: DeserializeOwned>(
+pub async fn _get_with_headers<T: DeserializeOwned>(
     url: &str,
     headers: HashMap<&str, &str>,
 ) -> Result<T, ApiError> {

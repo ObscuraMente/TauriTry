@@ -4,6 +4,11 @@ import { Window } from "@tauri-apps/api/window";
 import pkg from "../../package.json";
 import { Menu } from "@tauri-apps/api/menu";
 
+function capitalizeFirstLetter(str: string) {
+  if (!str) return "";
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
 // 处理窗口操作的工具函数
 async function getMainWindow() {
   return new Window("main");
@@ -55,7 +60,7 @@ export default async function tray_init() {
   const options = {
     icon: icon || "",
     // 菜单将由Rust端自动处理
-    tooltip: pkg.name, // 添加托盘提示文本
+    tooltip: capitalizeFirstLetter(pkg.name), // 添加托盘提示文本
     menu,
     // 托盘行为
     action: (event: TrayIconEvent) => {
