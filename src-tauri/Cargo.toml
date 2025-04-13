@@ -1,6 +1,6 @@
 # 包的基本信息
 [package]
-name = "tauri-app"           # 项目名称
+name = "tool"           # 项目名称
 version = "0.1.0"            # 项目版本
 description = "A Tauri App"  # 项目描述
 authors = ["you"]            # 作者信息
@@ -56,3 +56,13 @@ lto = true          # 链接时优化
 opt-level = "s"     # 优化级别：'s'=大小优先，'3'=性能优先
 panic = "abort"     # 禁用 panic 处理
 strip = true        # 移除调试符号
+
+[target.'cfg(target_os = "windows")'.dependencies]
+tauri-plugin-updater = { version = "2.7.0", features = ["rustls-tls", "zip"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+tauri-plugin-updater = { version = "2.7.0", features = ["rustls-tls", "zip"] }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+tauri-plugin-updater = { version = "2.7.0", features = ["rustls-tls", "zip"] }
+

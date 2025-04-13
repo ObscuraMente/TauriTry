@@ -88,6 +88,9 @@
     // 是否激活打包功能
     active: true,
 
+    // 是否生成更新程序及其签名
+    createUpdaterArtifacts: true,
+
     // 打包目标平台，"all" 表示所有支持的平台
     targets: "all",
 
@@ -123,35 +126,34 @@
   },
 
   // 插件配置（可选）
-  // plugins: {
-  //   // 自动更新插件配置
-  //   updater: {
-  //     active: true,                           // 是否启用自动更新
-  //     dialog: true,                           // 是否显示更新对话框
-  //     endpoints: ["https://updates.app.com"], // 更新服务器端点
-  //     pubkey: "",                             // 更新签名公钥
-  //   },
-  //   // 启动页配置
-  //   splashscreen: {
-  //     image: "splashscreen.png",              // 启动页图片路径
-  //     duration: 3000,                         // 显示时长（毫秒）
-  //   },
-  // },
-
-  // 权限控制（可选，控制应用可访问的系统API）
-  // allowlist: {
-  //   fs: {
-  //     all: false,                       // 是否允许所有文件系统操作
-  //     readFile: true,                   // 允许读取文件
-  //     writeFile: true,                  // 允许写入文件
-  //     scope: ["$APP/*", "$DESKTOP/*"],  // 允许的文件路径范围
-  //   },
-  //   shell: {
-  //     all: false,                       // 是否允许所有shell命令
-  //     open: true,                       // 允许打开URL/文件
-  //   },
-  //   notification: {
-  //     all: true,                        // 允许所有通知API
-  //   },
-  // },
+  plugins: {
+    // 自动更新插件配置
+    updater: {
+      active: true, // 是否启用自动更新
+      dialog: true, // 是否显示更新对话框
+      endpoints: ["https://tauriupdate.jiang.in/update.json"], // 更新服务器端点
+      pubkey: "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDJERTg5QjE4MUQ2M0MwQkYKUldTL3dHTWRHSnZvTFdPRW8yUFRxZmdLQ1YwN3VOdWNNS0ZuRHJ3UjJYQk1LOG5pYW4vSm00R28K", // 更新签名公钥
+    },
+    //   // 启动页配置
+    //   splashscreen: {
+    //     image: "splashscreen.png",              // 启动页图片路径
+    //     duration: 3000,                         // 显示时长（毫秒）
+    //   },
+    // },
+    // 权限控制（可选，控制应用可访问的系统API）
+    // allowlist: {
+    //   fs: {
+    //     all: false,                       // 是否允许所有文件系统操作
+    //     readFile: true,                   // 允许读取文件
+    //     writeFile: true,                  // 允许写入文件
+    //     scope: ["$APP/*", "$DESKTOP/*"],  // 允许的文件路径范围
+    //   },
+    //   shell: {
+    //     all: false,                       // 是否允许所有shell命令
+    //     open: true,                       // 允许打开URL/文件
+    //   },
+    //   notification: {
+    //     all: true,                        // 允许所有通知API
+    //   },
+  },
 }
