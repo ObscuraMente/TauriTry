@@ -3,13 +3,13 @@
   $schema: "https://schema.tauri.app/config/2",
 
   // 应用的产品名称，将显示在安装程序和应用标题中
-  productName: "tauri-app",
+  productName: "Tauri-cursor",
 
   // 应用版本号
   version: "0.1.0",
 
   // 应用的唯一标识符，通常使用反向域名格式
-  identifier: "com.tauri-app.app",
+  identifier: "com.jiang.cursor",
 
   // 构建相关配置
   build: {

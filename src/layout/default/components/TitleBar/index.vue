@@ -7,6 +7,9 @@ const appWindow = new Window("main");
 const max_state_name = ref("window-maximize");
 const max_state = ref(false);
 
+//读取vite 环境变量
+const app_title = import.meta.env.VITE_APP_TITLE;
+
 watch(max_state, async (newValue) => {
   if (newValue) {
     //当前状态是最大化
@@ -38,7 +41,7 @@ async function window_close() {
   >
     <div class="flex-1 h-full flex items-center pl-10px">
       <div class="text-12px text-text select-none">
-        {{ pkg.name }} {{ pkg.version }}
+        {{ app_title }} {{ pkg.version }}
       </div>
 
       <Weather />
