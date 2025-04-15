@@ -1,6 +1,14 @@
 <script setup lang="ts">
 import { invoke } from "@tauri-apps/api/core";
 
+// 确保生命周期钩子在其他逻辑之前定义
+const weather = ref<Weather>();
+
+// 先注册生命周期钩子
+onMounted(() => {
+  getWeather();
+});
+
 interface Weather {
   province: string;
   city: string;
@@ -8,15 +16,10 @@ interface Weather {
   temperature: string;
 }
 
-const weather = ref<Weather>();
 async function getWeather() {
   const res = await invoke("get_weather");
   weather.value = res as Weather;
 }
-
-onMounted(async () => {
-  await getWeather();
-});
 </script>
 
 <template>

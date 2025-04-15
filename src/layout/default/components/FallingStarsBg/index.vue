@@ -8,25 +8,7 @@
 <script setup lang="ts">
 import { cn } from "../../../../lib/utils";
 
-interface Star {
-  x: number;
-  y: number;
-  z: number;
-  speed: number;
-}
-
-const props = withDefaults(
-  defineProps<{
-    color?: string;
-    count?: number;
-    class?: string;
-  }>(),
-  {
-    color: "#FFF",
-    count: 100,
-  }
-);
-
+// 定义生命周期钩子必须在所有其他逻辑之前
 const starsCanvas = ref<HTMLCanvasElement | null>(null);
 let perspective: number = 0;
 let stars: Star[] = [];
@@ -57,6 +39,7 @@ let stabilizationPeriod = 100; // 前20次FPS计算不调整性能模式
 let dpr = 1; // 设备像素比
 let resizeObserver: ResizeObserver | null = null;
 
+// 所有生命周期钩子必须直接放在组件顶部
 onMounted(() => {
   const canvas = starsCanvas.value;
   if (!canvas) return;
@@ -82,6 +65,25 @@ onBeforeUnmount(() => {
     starWorker = null;
   }
 });
+
+interface Star {
+  x: number;
+  y: number;
+  z: number;
+  speed: number;
+}
+
+const props = withDefaults(
+  defineProps<{
+    color?: string;
+    count?: number;
+    class?: string;
+  }>(),
+  {
+    color: "#FFF",
+    count: 100,
+  }
+);
 
 // 检测设备初始性能并设置合适的性能模式
 function checkInitialPerformance() {

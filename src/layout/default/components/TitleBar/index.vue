@@ -1,14 +1,12 @@
 <script setup>
 import { ref, watch } from "vue";
 import { Window } from "@tauri-apps/api/window";
-import pkg from "@/../package.json";
 import Weather from "./components/weather.vue";
+import { invoke } from "@tauri-apps/api/core";
+
 const appWindow = new Window("main");
 const max_state_name = ref("window-maximize");
 const max_state = ref(false);
-
-//读取vite 环境变量
-const app_title = import.meta.env.VITE_APP_TITLE;
 
 watch(max_state, async (newValue) => {
   if (newValue) {
@@ -32,6 +30,16 @@ function window_maximize() {
 async function window_close() {
   await appWindow.close();
 }
+
+const appInfo = ref({
+  name: "",
+  version: "",
+});
+
+onMounted(async () => {
+  const v = await invoke("get_package_info");
+  appInfo.value = v;
+});
 </script>
 
 <template>
@@ -41,7 +49,7 @@ async function window_close() {
   >
     <div class="flex-1 h-full flex items-center pl-10px">
       <div class="text-12px text-text select-none">
-        {{ app_title }} {{ pkg.version }}
+        {{ appInfo.name }} {{ appInfo.version }}
       </div>
 
       <Weather />

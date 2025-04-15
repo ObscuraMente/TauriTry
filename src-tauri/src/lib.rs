@@ -1,6 +1,7 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 mod api;
 
+use api::get_package_info;
 use api::get_weather; //获取Ip地址的天气
 use tauri::{AppHandle, Manager};
 use tauri_plugin_updater::UpdaterExt;
@@ -30,7 +31,11 @@ pub fn run() {
             let _ = show_window(app);
         }))
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet, get_weather])
+        .invoke_handler(tauri::generate_handler![
+            greet,
+            get_weather,
+            get_package_info
+        ])
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -55,24 +60,56 @@ fn show_window(app: &AppHandle) {
 
 // 添加更新函数
 async fn update(app: tauri::AppHandle) -> tauri_plugin_updater::Result<()> {
-    if let Some(update) = app.updater()?.check().await? {
-        let mut downloaded = 0;
+    println!("开始检查更新...");
+    match app.updater() {
+        Ok(updater) => {
+            println!("获取更新器成功");
+            match updater.check().await {
+                Ok(Some(update)) => {
+                    println!("发现新版本更新:");
+                    println!("版本: {}", update.version);
+                    println!("当前版本: {}", update.current_version);
+                    if let Some(date) = &update.date {
+                        println!("发布日期: {}", date);
+                    }
+                    if let Some(body) = &update.body {
+                        println!("更新内容: {}", body);
+                    }
+                    let mut downloaded = 0;
 
-        // alternatively we could also call update.download() and update.install() separately
-        update
-            .download_and_install(
-                |chunk_length, content_length| {
-                    downloaded += chunk_length;
-                    println!("downloaded {downloaded} from {content_length:?}");
-                },
-                || {
-                    println!("download finished");
-                },
-            )
-            .await?;
-
-        println!("update installed");
-        app.restart();
+                    match update
+                        .download_and_install(
+                            |chunk_length, content_length| {
+                                downloaded += chunk_length;
+                                println!("已下载: {downloaded}/{:?}", content_length);
+                            },
+                            || {
+                                println!("下载完成");
+                            },
+                        )
+                        .await
+                    {
+                        Ok(_) => {
+                            println!("更新已安装");
+                            app.restart();
+                        }
+                        Err(e) => {
+                            eprintln!("下载或安装更新时出错: {}", e);
+                            return Err(e);
+                        }
+                    }
+                }
+                Ok(None) => println!("没有可用更新"),
+                Err(e) => {
+                    eprintln!("检查更新时出错: {}", e);
+                    return Err(e);
+                }
+            }
+        }
+        Err(e) => {
+            eprintln!("获取更新器失败: {}", e);
+            return Err(e);
+        }
     }
 
     Ok(())

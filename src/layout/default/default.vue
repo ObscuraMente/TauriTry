@@ -17,7 +17,7 @@ const isDark = computed(() => useColorMode().value == "dark");
     />
 
     <div select-none h-full flex overflow-hidden box-border flex-1>
-      <div flex-1 rounded-lg flex flex-col justify-between p-4>
+      <div flex-1 rounded-lg flex flex-col justify-between p-2>
         <div flex-1 z-999 rounded-lg p-2 class="bg-[rgba(0,0,0,0.1)]">
           <router-view />
         </div>
