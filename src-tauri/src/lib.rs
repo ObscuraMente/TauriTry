@@ -1,15 +1,10 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-mod api;
+mod api; // 导入 api 模块
 
-use api::get_package_info;
+use api::get_package_info; //获取应用信息
 use api::get_weather; //获取Ip地址的天气
-use tauri::{AppHandle, Manager};
-use tauri_plugin_updater::UpdaterExt;
-
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
-}
+use tauri::{AppHandle, Manager}; // 导入 Tauri 库
+use tauri_plugin_updater::UpdaterExt; // 导入更新插件
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -31,11 +26,7 @@ pub fn run() {
             let _ = show_window(app);
         }))
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![
-            greet,
-            get_weather,
-            get_package_info
-        ])
+        .invoke_handler(tauri::generate_handler![get_weather, get_package_info])
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
