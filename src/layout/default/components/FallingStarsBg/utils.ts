@@ -166,8 +166,8 @@ export function getSeasonEffects(currentSeason: string | null, effectDensityFact
   // 使用对象映射代替多个if-else，提高可读性和效率
   const seasonEffects: Record<string, {ratio: number, type: string}> = {
     'winter': {ratio: 0.15 * effectDensityFactor, type: 'snowflake'},
-    'spring': {ratio: 0.25 * effectDensityFactor, type: 'sakura'}, // 增加樱花比例
-    'autumn': {ratio: 0.35 * effectDensityFactor, type: 'leaf'}, // 显著增加秋叶比例
+    'spring': {ratio: 0.15 * effectDensityFactor, type: 'sakura'}, // 增加樱花比例
+    'autumn': {ratio: 0.15 * effectDensityFactor, type: 'leaf'}, // 显著增加秋叶比例
     'summer': {ratio: 0, type: ''} // 夏季不显示特效
   };
 
