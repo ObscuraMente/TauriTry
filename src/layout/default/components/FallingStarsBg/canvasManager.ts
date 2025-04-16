@@ -101,7 +101,8 @@ export function calculateStarCount(
 
   // 检测设备类型
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-  const isTablet = isMobile && Math.min(window.screen.width, window.screen.height) > 768;
+  const isTablet =
+    isMobile && Math.min(window.screen.width, window.screen.height) > 768;
 
   // 根据设备类型和方向调整星星密度
   let densityFactor = 1.0;
@@ -137,8 +138,10 @@ export function calculateStarCount(
   starCount = Math.max(50, Math.min(starCount, 500));
 
   // 仅在开发环境输出日志
-  if (process.env.NODE_ENV === 'development') {
-    console.log(`屏幕面积比例: ${areaRatio.toFixed(2)}, 星星数量: ${starCount}`);
+  if (process.env.NODE_ENV === "development") {
+    console.log(
+      `屏幕面积比例: ${areaRatio.toFixed(2)}, 星星数量: ${starCount}`
+    );
   }
 
   return starCount;
