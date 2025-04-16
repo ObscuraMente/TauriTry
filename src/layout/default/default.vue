@@ -2,9 +2,12 @@
 import FallingStarsBg from "./components/FallingStarsBg/index.vue";
 import TitleBar from "./components/TitleBar/index.vue";
 import { useColorMode } from "@vueuse/core";
+import { computed } from "vue";
 import { Dock, DockIcon, DockSeparator } from "./components/Dock";
 
-const isDark = computed(() => useColorMode().value == "dark");
+// 在setup顶层调用useColorMode，而不是在computed内部
+const colorMode = useColorMode();
+const isDark = computed(() => colorMode.value == "dark");
 </script>
 
 <template>

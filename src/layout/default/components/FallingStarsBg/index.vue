@@ -47,10 +47,34 @@ const props = withDefaults(defineProps<FallingStarsBgProps>(), {
 });
 
 // 组件状态变量
+const isAnimating = ref(true);
+const stars = ref<Star[]>([]);
 const starsCanvas = ref<HTMLCanvasElement | null>(null);
+const starsCtx = ref<CanvasRenderingContext2D | null>(null);
+const rafId = ref<number | null>(null);
+const lastTime = ref<number>(0);
+const isTransitioning = ref(false);
+const transitionStartTime = ref<number>(0);
+const mouseMoveTracker = {
+  lastX: 0,
+  lastY: 0,
+  moveX: 0,
+  moveY: 0,
+  lastUpdateTime: 0,
+};
+
+// 添加窗口状态变量
+const lastWindowWidth = ref(window.innerWidth);
+const lastWindowHeight = ref(window.innerHeight);
+const isWindowEnlarged = ref(false);
+const windowSizeChangeTime = ref(0);
+let needsFullRedraw = false;
+
+// 添加过渡时间常量
+const TRANSITION_DURATION = 1200; // 过渡持续时间（毫秒）
+const FADE_DURATION = 600; // 淡入淡出持续时间（毫秒）
+
 let perspective: number = 0;
-let stars: Star[] = [];
-let ctx: CanvasRenderingContext2D | null = null;
 let starWorker: Worker | null = null;
 let animationFrameId: number | null = null;
 let isComponentVisible = true;
@@ -59,7 +83,6 @@ let isPageVisible = true;
 // 缓存画布相关变量
 let offscreenCanvas: HTMLCanvasElement | null = null;
 let offscreenCtx: CanvasRenderingContext2D | null = null;
-let needsFullRedraw = true; // 是否需要完全重绘
 
 // 性能监控变量
 let frames = 0;
@@ -73,7 +96,6 @@ const FPS_HISTORY_SIZE = 5; // 保存最近5次FPS测量值
 // 帧率限制相关变量
 let targetFPS = 60; // 目标帧率
 let frameInterval = 1000 / targetFPS; // 每帧的时间间隔
-let lastFrameTime = 0; // 上一帧的时间
 
 // 稳定期计数器
 let stabilizationPeriod = 20; // 前20次FPS计算不调整性能模式
@@ -81,6 +103,19 @@ let stabilizationPeriod = 20; // 前20次FPS计算不调整性能模式
 // DPR变量
 let resizeObserver: ResizeObserver | null = null;
 let visibilityObserver: IntersectionObserver | null = null;
+
+// 添加过渡相关变量
+let targetStarCount: number = 0; // 目标星星数量
+
+// 添加缓动函数
+function easeInOutCubic(t: number): number {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
+// 添加缓动函数
+function easeOutQuart(t: number): number {
+  return 1 - Math.pow(1 - t, 4);
+}
 
 // 组件挂载
 onMounted(() => {
@@ -106,8 +141,23 @@ onMounted(() => {
   // 初始化画布
   setInitialCanvasSize();
 
+  // 计算视口相对于标准尺寸的缩放比例
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  const areaRatio = (viewportWidth * viewportHeight) / (1920 * 1080);
+
+  // 根据面积比例调整星星数量
+  const densityFactor = 1.5; // 增加密度系数
+  const adjustedCount = Math.max(
+    120, // 提高最小星星数量
+    Math.round(props.count * Math.sqrt(areaRatio) * densityFactor)
+  );
+
+  // 初始化Web Worker - 现在在onMounted中直接调用
+  initializeWorkerIfNeeded(adjustedCount);
+
   // 确保星星被初始化
-  if (stars.length === 0) {
+  if (stars.value.length === 0) {
     initializeStars();
   }
 
@@ -119,7 +169,7 @@ onMounted(() => {
 
   // 仅在开发环境输出调试信息
   if (process.env.NODE_ENV === "development") {
-    console.log("星空背景初始化完成，星星数量:", stars.length);
+    console.log("星空背景初始化完成，星星数量:", stars.value.length);
   }
 });
 
@@ -150,81 +200,45 @@ onBeforeUnmount(() => {
   }
 });
 
-// 处理窗口大小变化
+// 修改窗口大小处理函数
 function handleResize() {
-  // 使用固定尺寸画布，窗口大小变化时只需调整星星数量
+  if (!starsCanvas.value || !starsCtx.value) return;
 
-  // 计算视口相对于标准尺寸的缩放比例
-  const viewportWidth = window.innerWidth;
-  const viewportHeight = window.innerHeight;
-  const areaRatio = (viewportWidth * viewportHeight) / (1920 * 1080);
+  // 获取当前窗口尺寸
+  const currentWidth = window.innerWidth;
+  const currentHeight = window.innerHeight;
 
-  // 根据面积比例调整星星数量，使用更高的密度系数1.5
-  const densityFactor = 1.5; // 增加密度系数
-  const adjustedCount = Math.max(
-    120, // 提高最小星星数量
-    Math.round(props.count * Math.sqrt(areaRatio) * densityFactor)
-  );
+  // 检查窗口大小变化状态
+  const isEnlarged =
+    currentWidth > lastWindowWidth.value + 100 ||
+    currentHeight > lastWindowHeight.value + 100;
 
-  // 记录调试信息
-  if (process.env.NODE_ENV === "development") {
-    console.log(
-      `视口尺寸变化: ${viewportWidth}x${viewportHeight}, 面积比例: ${areaRatio.toFixed(
-        2
-      )}, 调整后星星数量: ${adjustedCount}`
-    );
+  // 如果窗口增大了很多（如从最小化恢复），设置标志以便更好地分布星星
+  if (isEnlarged) {
+    isWindowEnlarged.value = true;
+    windowSizeChangeTime.value = performance.now();
+
+    // 记录大小变更时间并添加更多星星来填充新区域
+    const newStarsCount = Math.floor((currentWidth * currentHeight) / 6000);
+    addStars(newStarsCount);
+
+    // 5秒后重置窗口放大状态
+    setTimeout(() => {
+      isWindowEnlarged.value = false;
+    }, 5000);
   }
 
-  // 星星数量变化不大时，不进行重新初始化
-  const countDiff = Math.abs(stars.length - adjustedCount);
-  if (countDiff < adjustedCount * 0.2) {
-    if (process.env.NODE_ENV === "development") {
-      console.log(
-        `星星数量变化不大 (${stars.length} -> ${adjustedCount})，不重新初始化`
-      );
-    }
-    return;
-  }
+  // 更新上次窗口尺寸
+  lastWindowWidth.value = currentWidth;
+  lastWindowHeight.value = currentHeight;
 
-  // 平滑过渡：停止当前动画，重新初始化星星，重启动画
-  stopAnimation();
-
-  // 重新初始化星星
-  if (starWorker) {
-    // 暂停Worker
-    pauseWorker(starWorker);
-
-    // 更新Worker配置
-    const currentSeason = detectSeason() || "spring";
-    const effectDensityFactor = 1.2;
-    const effect = getSeasonEffects(currentSeason, effectDensityFactor);
-
-    // 重新初始化Worker
-    initializeWorker(starWorker, {
-      canvasWidth: 1920,
-      canvasHeight: 1080,
-      dpr: 1,
-      performanceMode,
-      starCount: adjustedCount,
-      targetFPS,
-      perspective,
-      season: currentSeason,
-      specialEffectType: effect.type,
-      specialEffectRatio: effect.ratio,
-    });
-
-    // 恢复Worker
-    resumeWorker(starWorker);
-  } else {
-    // 重新初始化星星
-    initializeStars(adjustedCount);
-  }
+  // 调整画布尺寸
+  starsCanvas.value.width = currentWidth;
+  starsCanvas.value.height = currentHeight;
+  starsCtx.value.fillStyle = "#000";
 
   // 标记需要完全重绘
   needsFullRedraw = true;
-
-  // 重启动画
-  startAnimation();
 }
 
 // 处理元素可见性变化
@@ -243,7 +257,7 @@ function handleVisibilityChange(entries: IntersectionObserverEntry[]) {
       const oldMode = performanceMode;
       performanceMode = Math.max(performanceMode, 1);
       if (oldMode !== performanceMode) {
-        targetFPS = updateTargetFPS(performanceMode, stars.length);
+        targetFPS = updateTargetFPS(performanceMode, stars.value.length);
         frameInterval = 1000 / targetFPS;
         updateWorkerConfig(starWorker, performanceMode, targetFPS);
       }
@@ -286,7 +300,7 @@ function updateAnimationState() {
   if (shouldAnimate) {
     if (!animationFrameId) {
       // 重置时间相关变量，避免大幅度时间增量
-      lastFrameTime = performance.now();
+      lastTime.value = performance.now();
       lastFpsUpdate = performance.now();
       startAnimation();
     }
@@ -303,7 +317,7 @@ function updateAnimationState() {
 // 启动动画
 function startAnimation() {
   if (animationFrameId) return;
-  lastFrameTime = performance.now();
+  lastTime.value = performance.now();
   lastFpsUpdate = performance.now();
   frames = 0;
   animationFrameId = requestAnimationFrame(animate);
@@ -349,7 +363,7 @@ function setInitialCanvasSize() {
   );
 
   // 获取上下文
-  ctx = canvas.getContext("2d", { alpha: true });
+  starsCtx.value = canvas.getContext("2d", { alpha: true });
 
   // 设置透视值，使用固定值
   perspective = 400;
@@ -368,11 +382,41 @@ function setInitialCanvasSize() {
     offscreenCtx = newCtx;
   }
 
+  // 如果星星数组为空，在主线程中初始化星星
+  if (stars.value.length === 0) {
+    initializeStars(adjustedCount);
+  }
+
+  // 标记需要完全重绘
+  needsFullRedraw = true;
+
+  // 设置初始背景为白色
+  if (starsCtx.value) {
+    starsCtx.value.fillStyle = "#FFFFFF";
+    starsCtx.value.fillRect(0, 0, canvasWidth, canvasHeight);
+
+    // 立即绘制星星，确保初始化时就能看到
+    if (stars.value.length > 0) {
+      stars.value.forEach((star) => {
+        // 使用类型断言确保 ctx 不为 null
+        drawStarToContext(
+          star,
+          starsCtx.value as CanvasRenderingContext2D,
+          undefined,
+          perspective
+        );
+      });
+    }
+  }
+}
+
+// 初始化web worker - 将此逻辑移到onMounted中
+function initializeWorkerIfNeeded(adjustedCount: number) {
   try {
     // 初始化优化的Worker
     if (!starWorker) {
       starWorker = initWorker((updatedStars) => {
-        stars = updatedStars;
+        stars.value = updatedStars;
       });
 
       if (!starWorker) {
@@ -384,6 +428,10 @@ function setInitialCanvasSize() {
 
     // 发送初始化消息给Worker
     if (starWorker) {
+      // 使用固定大小画布
+      const canvasWidth = 1920;
+      const canvasHeight = 1080;
+
       // 检测当前季节，添加季节信息
       const currentSeason = detectSeason() || "spring"; // 如果返回空，默认使用春季
 
@@ -410,33 +458,6 @@ function setInitialCanvasSize() {
     starWorker = null;
     initializeStars(adjustedCount);
   }
-
-  // 如果星星数组为空，在主线程中初始化星星
-  if (stars.length === 0 && !starWorker) {
-    initializeStars(adjustedCount);
-  }
-
-  // 标记需要完全重绘
-  needsFullRedraw = true;
-
-  // 设置初始背景为白色
-  if (ctx) {
-    ctx.fillStyle = "#FFFFFF";
-    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-
-    // 立即绘制星星，确保初始化时就能看到
-    if (stars.length > 0) {
-      stars.forEach((star) => {
-        // 使用类型断言确保 ctx 不为 null
-        drawStarToContext(
-          star,
-          ctx as CanvasRenderingContext2D,
-          undefined,
-          perspective
-        );
-      });
-    }
-  }
 }
 
 // 根据性能模式初始化星星
@@ -455,7 +476,7 @@ function initializeStars(count = props.count) {
     );
   }
 
-  stars = [];
+  stars.value = [];
 
   // 计算星星数量 - 增加密度系数
   const densityFactor = 1.2; // 应用额外的密度提升
@@ -576,7 +597,7 @@ function initializeStars(count = props.count) {
     const x = (Math.random() - 0.5) * 2 * canvasWidth;
     const y = (Math.random() - 0.5) * 2 * canvasHeight;
 
-    stars.push({
+    stars.value.push({
       x,
       y,
       z: Math.random() * canvasWidth,
@@ -598,7 +619,7 @@ function initializeStars(count = props.count) {
   }
 }
 
-// 优化的 animate 函数
+// 修改animate函数，添加星星数量平滑过渡逻辑
 function animate(currentTime = 0) {
   const canvas = starsCanvas.value;
   if (!canvas) return;
@@ -607,24 +628,92 @@ function animate(currentTime = 0) {
   animationFrameId = requestAnimationFrame(animate);
 
   // 如果星星数组为空，初始化星星而不是返回
-  if (stars.length === 0) {
+  if (stars.value.length === 0) {
     // 如果没有星星，先初始化星星
     initializeStars();
     // 继续执行而不是返回，确保立即渲染
   }
 
   // 帧率控制
-  const elapsed = currentTime - lastFrameTime;
+  const elapsed = currentTime - lastTime.value;
   if (elapsed < frameInterval) {
     return;
   }
 
-  lastFrameTime = currentTime - (elapsed % frameInterval);
+  lastTime.value = currentTime - (elapsed % frameInterval);
+
+  // 处理星星数量过渡
+  if (isTransitioning.value && targetStarCount !== stars.value.length) {
+    const transitionElapsed = currentTime - transitionStartTime.value;
+    const rawProgress = Math.min(transitionElapsed / TRANSITION_DURATION, 1);
+
+    // 使用缓动函数获得更自然的过渡效果
+    const progress = easeInOutCubic(rawProgress);
+
+    if (progress >= 1 || Math.abs(stars.value.length - targetStarCount) <= 5) {
+      // 过渡结束，直接设置为目标数量
+      isTransitioning.value = false;
+
+      // 停止当前动画
+      stopAnimation();
+
+      // 重新初始化星星到目标数量
+      if (starWorker) {
+        pauseWorker(starWorker);
+        initializeWorkerIfNeeded(targetStarCount);
+      } else {
+        initializeStars(targetStarCount);
+      }
+
+      // 标记需要完全重绘
+      needsFullRedraw = true;
+
+      // 重启动画
+      startAnimation();
+
+      if (process.env.NODE_ENV === "development") {
+        console.log(`星星数量过渡完成: ${targetStarCount}`);
+      }
+
+      return;
+    }
+
+    // 计算当前帧应该有的星星数量
+    const currentTargetCount = Math.round(
+      stars.value.length + (targetStarCount - stars.value.length) * progress
+    );
+
+    // 只有当数量变化时才更新
+    if (currentTargetCount !== stars.value.length) {
+      // 根据方向增加或减少星星
+      if (currentTargetCount > stars.value.length) {
+        // 需要增加星星
+        addStars(currentTargetCount - stars.value.length);
+      } else if (currentTargetCount < stars.value.length) {
+        // 需要减少星星
+        removeStars(stars.value.length - currentTargetCount);
+      }
+
+      if (process.env.NODE_ENV === "development" && Math.random() < 0.05) {
+        // 只记录大约5%的帧，避免日志过多
+        console.log(
+          `星星数量过渡中: ${
+            stars.value.length
+          } / ${targetStarCount} (${Math.round(progress * 100)}%)`
+        );
+      }
+    }
+
+    // 移除高耗GPU的模糊效果，保持高性能
+  } else if (offscreenCtx) {
+    // 确保非过渡时没有滤镜效果
+    offscreenCtx.filter = "none";
+  }
 
   // 确保上下文存在
-  if (!ctx) {
-    ctx = canvas.getContext("2d", { alpha: true });
-    if (!ctx) return;
+  if (!starsCtx.value) {
+    starsCtx.value = canvas.getContext("2d", { alpha: true });
+    if (!starsCtx.value) return;
   }
 
   // 确保离屏画布存在且尺寸正确
@@ -665,7 +754,7 @@ function animate(currentTime = 0) {
     if (process.env.NODE_ENV === "development") {
       console.log(
         `当前FPS: ${Math.round(fps)}, 性能模式: ${performanceMode}, 星星数量: ${
-          stars.length
+          stars.value.length
         }`
       );
     }
@@ -690,7 +779,7 @@ function animate(currentTime = 0) {
 
     if (needsRedraw) {
       needsFullRedraw = true;
-      targetFPS = updateTargetFPS(performanceMode, stars.length);
+      targetFPS = updateTargetFPS(performanceMode, stars.value.length);
       frameInterval = 1000 / targetFPS;
       updateWorkerConfig(starWorker, performanceMode, targetFPS);
     }
@@ -707,10 +796,12 @@ function animate(currentTime = 0) {
       );
 
       // 如果当前星星数量与理想数量差距较大，触发重新初始化
-      const countDiff = Math.abs(stars.length - idealCount);
+      const countDiff = Math.abs(stars.value.length - idealCount);
       if (countDiff > idealCount * 0.3) {
         if (process.env.NODE_ENV === "development") {
-          console.log(`星星数量需要调整: ${stars.length} -> ${idealCount}`);
+          console.log(
+            `星星数量需要调整: ${stars.value.length} -> ${idealCount}`
+          );
         }
         handleResize();
       }
@@ -756,7 +847,7 @@ function animate(currentTime = 0) {
     const canvasWidth = 1920;
     const canvasHeight = 1080;
 
-    stars.forEach((star) => {
+    stars.value.forEach((star) => {
       // 更新z位置（距离）
       star.z -= star.speed * timeScale;
 
@@ -839,11 +930,11 @@ function animate(currentTime = 0) {
   // 先绘制普通星星，再绘制特效星星，减少状态切换
 
   // 使用for循环代替forEach，提高性能
-  const len = stars.length;
+  const len = stars.value.length;
 
   // 第一次遍历绘制普通星星
   for (let i = 0; i < len; i++) {
-    const star = stars[i];
+    const star = stars.value[i];
     if (!star.specialEffect) {
       drawStarToContext(star, safeOffscreenCtx, undefined, perspective);
     }
@@ -851,7 +942,7 @@ function animate(currentTime = 0) {
 
   // 第二次遍历绘制特效星星
   for (let i = 0; i < len; i++) {
-    const star = stars[i];
+    const star = stars.value[i];
     if (star.specialEffect) {
       drawStarToContext(star, safeOffscreenCtx, undefined, perspective);
     }
@@ -860,7 +951,216 @@ function animate(currentTime = 0) {
   safeOffscreenCtx.restore();
 
   // 将离屏画布内容复制到主画布
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.drawImage(safeOffscreenCanvas, 0, 0);
+  starsCtx.value.clearRect(0, 0, canvas.width, canvas.height);
+  starsCtx.value.drawImage(safeOffscreenCanvas, 0, 0);
+}
+
+// 修改添加星星函数，优化星星分布
+function addStars(count: number) {
+  if (!count || count <= 0) return;
+
+  // 确保有画布
+  const canvas = starsCanvas.value;
+  if (!canvas) return;
+
+  const canvasWidth = 1920;
+  const canvasHeight = 1080;
+
+  // 检测当前季节 - 较大窗口时降低特效密度防止GPU过载
+  const currentSeason = detectSeason() || "spring";
+
+  // 根据屏幕大小动态调整特效密度
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  // 屏幕面积比例
+  const screenRatio = (viewportWidth * viewportHeight) / (1920 * 1080);
+
+  // 大屏幕时降低特效比例，防止过载
+  let effectDensityFactor = 1.2;
+  if (screenRatio > 1.5) {
+    // 大屏幕上降低特效密度
+    effectDensityFactor = 0.8;
+  } else if (screenRatio > 1) {
+    // 中等屏幕
+    effectDensityFactor = 1.0;
+  }
+
+  const seasonEffect = getSeasonEffects(currentSeason, effectDensityFactor);
+
+  // 在过渡期间使用更低的特效比例
+  const specialEffectRatio = seasonEffect.ratio * 0.6;
+
+  // 判断是否需要广泛分布（窗口放大或生成大量星星）
+  const needWiderDistribution = isWindowEnlarged.value || count > 100;
+
+  // 创建新星星
+  for (let i = 0; i < count; i++) {
+    // 随机决定星星类型
+    const starType = Math.random();
+    let size, opacity, speed;
+
+    if (starType < 0.7) {
+      // 70% 普通星星
+      size = Math.random() * 0.7 + 1.1;
+      opacity = Math.random() * 0.3 + 0.5;
+      speed = Math.random() * 4 + 2;
+    } else if (starType < 0.9) {
+      // 20% 中等星星
+      size = Math.random() * 0.9 + 1.3;
+      opacity = Math.random() * 0.3 + 0.6;
+      speed = Math.random() * 3 + 1.5;
+    } else {
+      // 10% 大星星
+      size = Math.random() * 1.2 + 1.6;
+      opacity = Math.random() * 0.2 + 0.7;
+      speed = Math.random() * 2 + 1;
+    }
+
+    // 添加闪烁属性
+    const twinkle = Math.random() > 0.7;
+    const twinkleSpeed = Math.random() * 0.02 + 0.01;
+
+    // 改进的星星分布逻辑
+    let x, y;
+    const angle = Math.random() * Math.PI * 2; // 随机角度
+
+    if (needWiderDistribution) {
+      // 窗口放大或大量星星时使用更广泛的分布
+      // 使用非线性分布确保边缘区域也有适当密度
+      const distributionFactor = Math.pow(Math.random(), 0.7); // 非线性分布
+
+      // 放大时使用更大的分布半径，最高可达画布的50%
+      let distributionRadius;
+      if (isWindowEnlarged.value) {
+        // 从最小化恢复时使用更均匀的分布
+        distributionRadius = canvasWidth * (0.3 + Math.random() * 0.2);
+      } else {
+        // 正常大量星星生成时使用逐渐扩大的分布
+        const expansionProgress = i / count; // 随着生成进度扩大分布
+        distributionRadius = canvasWidth * (0.15 + expansionProgress * 0.15);
+      }
+
+      const distanceFromCenter = distributionFactor * distributionRadius;
+      x = Math.cos(angle) * distanceFromCenter;
+      y = Math.sin(angle) * distanceFromCenter;
+    } else {
+      // 正常情况下使用中心分布
+      const centerRadius = 0.15 * canvasWidth;
+      const distanceFromCenter = Math.random() * centerRadius;
+      x = Math.cos(angle) * distanceFromCenter;
+      y = Math.sin(angle) * distanceFromCenter;
+    }
+
+    // 新星星从中心位置开始，设置较大的z值（远处）
+    const z = canvasWidth * (0.7 + Math.random() * 0.3);
+
+    // 较大的屏幕上减少特效星星，防止GPU过载
+    const screenSizeAdjustedRatio =
+      specialEffectRatio / Math.max(1, screenRatio * 0.7);
+    const isSpecialEffect = Math.random() < screenSizeAdjustedRatio;
+
+    let specialEffect = undefined;
+    let rotation = undefined;
+    let rotationSpeed = undefined;
+    let color = undefined;
+
+    if (isSpecialEffect) {
+      specialEffect = seasonEffect.type;
+      rotation = Math.random() * Math.PI * 2; // 随机初始旋转角度
+      rotationSpeed =
+        (Math.random() * 0.02 + 0.01) * (Math.random() > 0.5 ? 1 : -1);
+
+      // 根据特效类型设置颜色 - 简化颜色生成逻辑
+      if (specialEffect === "snowflake") {
+        color = "#A5D8FF"; // 淡蓝色雪花
+      } else if (specialEffect === "sakura") {
+        const pinkHue = 345 + Math.floor(Math.random() * 15);
+        color = `hsl(${pinkHue}, 80%, 75%)`;
+      } else if (specialEffect === "leaf") {
+        const leafHues = [30, 40, 15, 20];
+        const hue = leafHues[Math.floor(Math.random() * leafHues.length)];
+        color = `hsl(${hue}, 80%, 50%)`;
+        size *= 1.2; // 叶子略大
+      }
+    }
+
+    // 添加视觉过渡效果 - 保留淡入效果，但简化计算
+    let adjustedOpacity = opacity;
+    if (isTransitioning.value) {
+      const progress = Math.min(
+        (performance.now() - transitionStartTime.value) / 500,
+        1
+      );
+      adjustedOpacity = opacity * progress;
+    }
+
+    stars.value.push({
+      x,
+      y,
+      z,
+      speed,
+      size,
+      opacity: adjustedOpacity,
+      twinkle,
+      twinkleSpeed,
+      twinkleOffset: Math.random() * Math.PI * 2,
+      originalX: x,
+      originalY: y,
+      velocityX: 0,
+      velocityY: 0,
+      specialEffect,
+      rotation,
+      rotationSpeed,
+      color,
+    });
+  }
+
+  // 标记需要完全重绘
+  needsFullRedraw = true;
+}
+
+// 修改减少星星的函数，简化逻辑提高性能
+function removeStars(count: number) {
+  if (!count || count <= 0 || stars.value.length === 0) return;
+
+  // 限制移除数量，不超过当前星星总数
+  count = Math.min(count, stars.value.length);
+
+  // 简化移除逻辑 - 大屏幕时直接移除，避免额外计算
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  const screenRatio = (viewportWidth * viewportHeight) / (1920 * 1080);
+
+  // 只在小屏幕和过渡初期使用平滑淡出
+  if (screenRatio < 1.2 && isTransitioning.value) {
+    const progress =
+      (performance.now() - transitionStartTime.value) / TRANSITION_DURATION;
+
+    if (progress < 0.3) {
+      // 简化淡出逻辑 - 只处理部分星星，而且只调整不透明度
+      const starsToFade = Math.ceil(count * 0.5);
+      const remainingStars = stars.value.length - starsToFade;
+
+      // 直接设置不透明度而不是每个都单独计算
+      for (let i = remainingStars; i < stars.value.length; i++) {
+        if (stars.value[i]) {
+          stars.value[i].opacity = (stars.value[i].opacity || 0.5) * 0.6;
+        }
+      }
+
+      // 一次移除较少的星星，其余在下一帧处理
+      stars.value = stars.value.slice(
+        0,
+        stars.value.length - Math.ceil(count * 0.3)
+      );
+      return;
+    }
+  }
+
+  // 大多数情况下直接移除星星 - 更高效
+  stars.value = stars.value.slice(0, stars.value.length - count);
+
+  // 标记需要完全重绘
+  needsFullRedraw = true;
 }
 </script>
