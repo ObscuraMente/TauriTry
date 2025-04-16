@@ -18,9 +18,9 @@ interface Star {
   originalY?: number;
   // 特效相关属性
   specialEffect?: string; // 特效类型：'snowflake', 'sakura', 'leaf'
-  rotation?: number;     // 旋转角度
+  rotation?: number; // 旋转角度
   rotationSpeed?: number; // 旋转速度
-  color?: string;        // 特效颜色
+  color?: string; // 特效颜色
 }
 
 // 定义配置接口
@@ -62,7 +62,7 @@ let config: WorkerConfig = {
   performanceMode: 0,
   starCount: 100,
   targetFPS: 60,
-  perspective: 400
+  perspective: 400,
 };
 
 // 上次更新时间，用于计算增量时间
@@ -70,7 +70,7 @@ let lastUpdateTime = performance.now();
 let updateInterval: number | null = null;
 
 // 初始化星星
-function initializeStars() {
+function initializeOptimizedStars() {
   const { canvasWidth, canvasHeight, starCount, performanceMode } = config;
   starsArray.length = 0;
 
@@ -89,15 +89,18 @@ function initializeStars() {
     let size, opacity, speed;
 
     // 使用更简化的星星类型分配
-    if (starType < 0.7) { // 70% 普通星星 - 增大星星大小
+    if (starType < 0.7) {
+      // 70% 普通星星 - 增大星星大小
       size = Math.random() * 0.6 + 1.0; // 增大星星大小
       opacity = Math.random() * 0.3 + 0.5;
       speed = Math.random() * 4 + 2;
-    } else if (starType < 0.9) { // 20% 中等星星
+    } else if (starType < 0.9) {
+      // 20% 中等星星
       size = Math.random() * 0.8 + 1.2; // 增大星星大小
       opacity = Math.random() * 0.3 + 0.6;
       speed = Math.random() * 3 + 1.5;
-    } else { // 10% 大星星
+    } else {
+      // 10% 大星星
       size = Math.random() * 1.0 + 1.5; // 增大星星大小
       opacity = Math.random() * 0.2 + 0.7;
       speed = Math.random() * 2 + 1;
@@ -124,18 +127,21 @@ function initializeStars() {
     let specialEffect = undefined;
 
     // 使用配置中的特效比例，如果没有则使用默认值 0.25
-    const effectRatio = config.specialEffectRatio !== undefined ? config.specialEffectRatio : 0.25;
+    const effectRatio =
+      config.specialEffectRatio !== undefined
+        ? config.specialEffectRatio
+        : 0.25;
 
     if (effectRandom < effectRatio) {
       // 使用配置中的特效类型，如果没有则根据季节决定
       if (config.specialEffectType) {
         specialEffect = config.specialEffectType;
-      } else if (config.season === 'winter') {
-        specialEffect = 'snowflake';
-      } else if (config.season === 'spring') {
-        specialEffect = 'sakura';
-      } else if (config.season === 'autumn') {
-        specialEffect = 'leaf';
+      } else if (config.season === "winter") {
+        specialEffect = "snowflake";
+      } else if (config.season === "spring") {
+        specialEffect = "sakura";
+      } else if (config.season === "autumn") {
+        specialEffect = "leaf";
       }
     }
 
@@ -145,19 +151,20 @@ function initializeStars() {
 
     if (specialEffect) {
       rotation = Math.random() * Math.PI * 2; // 随机初始旋转角度
-      rotationSpeed = (Math.random() * 0.02 + 0.01) * (Math.random() > 0.5 ? 1 : -1); // 随机旋转速度和方向
+      rotationSpeed =
+        (Math.random() * 0.02 + 0.01) * (Math.random() > 0.5 ? 1 : -1); // 随机旋转速度和方向
 
       // 根据特效类型设置颜色
-      if (specialEffect === 'sakura') {
+      if (specialEffect === "sakura") {
         // 樱花粉色色调
         const pinkHue = Math.floor(Math.random() * 20) + 340; // 340-360 或 0-20 的色相
         const saturation = Math.floor(Math.random() * 30) + 70; // 70-100% 饱和度
         const lightness = Math.floor(Math.random() * 20) + 70; // 70-90% 亮度
         color = `hsl(${pinkHue}, ${saturation}%, ${lightness}%)`;
-      } else if (specialEffect === 'snowflake') {
+      } else if (specialEffect === "snowflake") {
         // 在白色背景上使用淡蓝色雪花，增强可见度
-        color = '#A5D8FF'; // 淡蓝色雪花
-      } else if (specialEffect === 'leaf') {
+        color = "#A5D8FF"; // 淡蓝色雪花
+      } else if (specialEffect === "leaf") {
         // 秋叶色调 - 使用更鲜艳的秋叶颜色
         const leafHues = [30, 40, 50, 20, 10, 15, 25]; // 黄色、橙色、红色色相
         const hue = leafHues[Math.floor(Math.random() * leafHues.length)];
@@ -187,13 +194,13 @@ function initializeStars() {
       specialEffect,
       rotation,
       rotationSpeed,
-      color
+      color,
     };
   }
 }
 
 // 更新星星位置
-function updateStars(deltaTime: number) {
+function updateOptimizedStars(deltaTime: number) {
   const { canvasWidth, canvasHeight } = config;
 
   // 使用实际的时间增量来计算移动，确保在不同帧率下移动速度一致
@@ -226,7 +233,7 @@ function updateStars(deltaTime: number) {
 
       // 随机决定是否添加闪烁和抖动效果 - 减少特效比例
       // 对于叶子，不添加闪烁效果
-      if (star.specialEffect === 'leaf') {
+      if (star.specialEffect === "leaf") {
         star.twinkle = false; // 叶子不闪烁
         star.opacity = 0.9; // 固定的不透明度
       } else {
@@ -236,7 +243,7 @@ function updateStars(deltaTime: number) {
       }
 
       // 对于叶子，使用更小的抖动幅度
-      if (star.specialEffect === 'leaf') {
+      if (star.specialEffect === "leaf") {
         star.jitter = true; // 叶子始终有轻微抖动，模拟风吹效果
         star.jitterAmount = 0.05; // 使用固定的抖动幅度，避免随机性
       } else {
@@ -248,21 +255,31 @@ function updateStars(deltaTime: number) {
     // 使用条件分支优化，减少不必要的计算
     // 如果星星有闪烁属性，计算闪烁效果
     // 但对于叶子特效，不应用闪烁效果
-    if (star.twinkle && star.twinkleSpeed && star.specialEffect !== 'leaf') {
+    if (star.twinkle && star.twinkleSpeed && star.specialEffect !== "leaf") {
       // 使用更高效的正弦计算
-      const twinkleFactor = 0.8 + 0.2 * Math.sin(currentTime * star.twinkleSpeed * Math.PI * 2 + (star.twinkleOffset || 0));
+      const twinkleFactor =
+        0.8 +
+        0.2 *
+          Math.sin(
+            currentTime * star.twinkleSpeed * Math.PI * 2 +
+              (star.twinkleOffset || 0)
+          );
       star.opacity = (star.opacity || 0.6) * twinkleFactor;
-    } else if (star.specialEffect === 'leaf') {
+    } else if (star.specialEffect === "leaf") {
       // 对于叶子，使用固定的不透明度，避免闪烁
       star.opacity = 0.9;
     }
 
     // 如果星星有抖动属性，计算抖动效果
-    if (star.jitter && star.originalX !== undefined && star.originalY !== undefined) {
+    if (
+      star.jitter &&
+      star.originalX !== undefined &&
+      star.originalY !== undefined
+    ) {
       const jitterAmount = star.jitterAmount || 0.2;
 
       // 对于叶子，使用非常稳定的抖动模式
-      if (star.specialEffect === 'leaf') {
+      if (star.specialEffect === "leaf") {
         // 使用固定的抖动模式，避免闪烁
         // 只使用z值确定抖动，这个值变化非常缓慢
         const fixedTime = Math.floor(star.z / 100) * 100; // 将时间固定到大的间隔
@@ -275,7 +292,8 @@ function updateStars(deltaTime: number) {
       } else {
         // 对于普通星星，使用正常的抖动计算
         const jitterX = Math.sin(currentTime * 2.0 + star.z) * jitterAmount;
-        const jitterY = Math.cos(currentTime * 1.7 + star.z * 0.5) * jitterAmount;
+        const jitterY =
+          Math.cos(currentTime * 1.7 + star.z * 0.5) * jitterAmount;
 
         // 应用抖动效果
         star.x = star.originalX + jitterX;
@@ -312,10 +330,10 @@ function startUpdateLoop() {
     const deltaTime = currentTime - lastUpdateTime;
     lastUpdateTime = currentTime;
 
-    const updatedStars = updateStars(deltaTime);
+    const updatedStars = updateOptimizedStars(deltaTime);
     const message: OutgoingMessageType = {
       type: "update",
-      stars: updatedStars
+      stars: updatedStars,
     };
     self.postMessage(message);
   }, interval) as unknown as number;
@@ -330,12 +348,18 @@ function updateConfig(newConfig: Partial<WorkerConfig>) {
   config = { ...config, ...newConfig };
 
   // 如果性能模式改变，重新初始化星星
-  if (newConfig.performanceMode !== undefined && newConfig.performanceMode !== oldPerformanceMode) {
-    initializeStars();
+  if (
+    newConfig.performanceMode !== undefined &&
+    newConfig.performanceMode !== oldPerformanceMode
+  ) {
+    initializeOptimizedStars();
   }
 
   // 如果目标帧率改变，重新启动更新循环
-  if (newConfig.targetFPS !== undefined && newConfig.targetFPS !== oldTargetFPS) {
+  if (
+    newConfig.targetFPS !== undefined &&
+    newConfig.targetFPS !== oldTargetFPS
+  ) {
     startUpdateLoop();
   }
 }
@@ -347,7 +371,7 @@ function updateCanvasSize(width: number, height: number) {
   config.perspective = width / 2;
 
   // 重新初始化星星以适应新的画布大小
-  initializeStars();
+  initializeOptimizedStars();
 }
 
 // 监听主线程消息
@@ -358,7 +382,7 @@ self.onmessage = (e: MessageEvent<IncomingMessageType>) => {
     case "init":
       config = message.config;
       lastUpdateTime = performance.now();
-      initializeStars();
+      initializeOptimizedStars();
       startUpdateLoop();
       break;
 

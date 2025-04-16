@@ -23,7 +23,7 @@ let dpr = 1;
 let performanceMode = 0;
 
 // 初始化星星
-function initializeStars(count: number) {
+function initializeBasicStars(count: number) {
   stars = [];
   for (let i = 0; i < count; i++) {
     stars.push({
@@ -36,7 +36,7 @@ function initializeStars(count: number) {
 }
 
 // 更新星星位置
-function updateStars() {
+function updateBasicStars() {
   const speedFactor =
     60 / (performanceMode === 0 ? 60 : performanceMode === 1 ? 40 : 30);
 
@@ -62,9 +62,9 @@ self.onmessage = (e: MessageEvent<WorkerMessage>) => {
     canvasHeight = data.canvasHeight;
     dpr = data.dpr;
     performanceMode = data.performanceMode;
-    initializeStars(data.stars.length);
+    initializeBasicStars(data.stars.length);
   } else if (type === "update") {
-    const updatedStars = updateStars();
+    const updatedStars = updateBasicStars();
     self.postMessage({ type: "update", stars: updatedStars });
   }
 };

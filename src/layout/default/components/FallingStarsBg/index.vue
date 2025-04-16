@@ -35,15 +35,10 @@ import {
   initWorker,
   initializeWorker,
   updateWorkerConfig,
-  updateWorkerCanvasSize,
   pauseWorker,
   resumeWorker,
 } from "./workerManager";
-import {
-  adjustCanvasSize,
-  createOffscreenCanvas,
-  calculateStarCount,
-} from "./canvasManager";
+import { createOffscreenCanvas, calculateStarCount } from "./canvasManager";
 
 // 定义组件属性
 const props = withDefaults(defineProps<FallingStarsBgProps>(), {
@@ -84,21 +79,13 @@ let lastFrameTime = 0; // 上一帧的时间
 let stabilizationPeriod = 20; // 前20次FPS计算不调整性能模式
 
 // DPR变量
-let dpr = 1; // 设备像素比
 let resizeObserver: ResizeObserver | null = null;
 let visibilityObserver: IntersectionObserver | null = null;
-
-// 窗口调整防抖相关变量
-let resizeTimeout: number | null = null;
-let pendingResize = false;
-const RESIZE_DEBOUNCE_DELAY = 150; // 减少窗口调整防抖延迟（从300毫秒改为150毫秒）
 
 // 组件挂载
 onMounted(() => {
   const canvas = starsCanvas.value;
   if (!canvas) return;
-
-  dpr = window.devicePixelRatio || 1;
 
   // 添加窗口大小变化监听
   window.addEventListener("resize", handleResize);
@@ -339,7 +326,6 @@ function setInitialCanvasSize() {
   // 不使用devicePixelRatio，保持固定像素
   const canvasWidth = 1920;
   const canvasHeight = 1080;
-  dpr = 1; // 固定DPR为1，不需要缩放
 
   // 计算视口相对于标准尺寸的缩放比例，用于动态调整星星数量
   const viewportWidth = window.innerWidth;
@@ -450,65 +436,6 @@ function setInitialCanvasSize() {
         );
       });
     }
-  }
-}
-
-// 在窗口调整停止后完全重新调整画布和星星
-function resizeCanvas() {
-  const canvas = starsCanvas.value;
-  if (!canvas) return;
-
-  // 确保画布样式属性设置正确
-  canvas.style.width = "100%";
-  canvas.style.height = "100%";
-
-  // 获取容器尺寸
-  const containerRect = canvas.parentElement?.getBoundingClientRect();
-  if (containerRect) {
-    // 设置画布实际尺寸（考虑设备像素比）
-    canvas.width = containerRect.width * dpr;
-    canvas.height = containerRect.height * dpr;
-
-    // 更新上下文的缩放
-    if (ctx) {
-      // 重置变换
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      // 应用设备像素比缩放
-      ctx.scale(dpr, dpr);
-    }
-  }
-
-  // 如果有Worker，通知其画布大小变化
-  updateWorkerCanvasSize(starWorker, canvas.width, canvas.height);
-
-  // 根据新的屏幕尺寸重新初始化星星
-  initializeStars();
-
-  // 窗口大小变化时需要完全重绘
-  needsFullRedraw = true;
-
-  // 立即绘制星星，确保在窗口大小变化停止后立即看到新的星星
-  if (ctx && stars.length > 0) {
-    ctx.fillStyle = "#FFFFFF";
-    ctx.fillRect(0, 0, canvas.width / dpr, canvas.height / dpr);
-
-    stars.forEach((star) => {
-      drawStarToContext(
-        star,
-        ctx as CanvasRenderingContext2D,
-        undefined,
-        perspective
-      );
-    });
-  }
-
-  // 仅在开发环境输出日志
-  if (process.env.NODE_ENV === "development") {
-    console.log(
-      `屏幕尺寸调整完成: ${canvas.width / dpr}x${
-        canvas.height / dpr
-      }, 星星数量: ${stars.length}`
-    );
   }
 }
 
