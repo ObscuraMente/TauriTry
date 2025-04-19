@@ -8,13 +8,13 @@
       width="1920"
       height="1080"
       style="
-        object-fit: cover;
-        min-width: 100%;
-        min-height: 100%;
-        transform: translate(-50%, -50%);
         position: absolute;
         top: 50%;
         left: 50%;
+        min-width: 100%;
+        min-height: 100%;
+        object-fit: cover;
+        transform: translate(-50%, -50%);
       "
     ></canvas>
   </div>
@@ -47,21 +47,12 @@ const props = withDefaults(defineProps<FallingStarsBgProps>(), {
 });
 
 // 组件状态变量
-const isAnimating = ref(true);
 const stars = ref<Star[]>([]);
 const starsCanvas = ref<HTMLCanvasElement | null>(null);
 const starsCtx = ref<CanvasRenderingContext2D | null>(null);
-const rafId = ref<number | null>(null);
 const lastTime = ref<number>(0);
 const isTransitioning = ref(false);
 const transitionStartTime = ref<number>(0);
-const mouseMoveTracker = {
-  lastX: 0,
-  lastY: 0,
-  moveX: 0,
-  moveY: 0,
-  lastUpdateTime: 0,
-};
 
 // 添加窗口状态变量
 const lastWindowWidth = ref(window.innerWidth);
@@ -72,7 +63,6 @@ let needsFullRedraw = false;
 
 // 添加过渡时间常量
 const TRANSITION_DURATION = 1200; // 过渡持续时间（毫秒）
-const FADE_DURATION = 600; // 淡入淡出持续时间（毫秒）
 
 let perspective: number = 0;
 let starWorker: Worker | null = null;
@@ -112,11 +102,6 @@ function easeInOutCubic(t: number): number {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
 
-// 添加缓动函数
-function easeOutQuart(t: number): number {
-  return 1 - Math.pow(1 - t, 4);
-}
-
 // 组件挂载
 onMounted(() => {
   const canvas = starsCanvas.value;
@@ -150,7 +135,7 @@ onMounted(() => {
   const densityFactor = 1.5; // 增加密度系数
   const adjustedCount = Math.max(
     120, // 提高最小星星数量
-    Math.round(props.count * Math.sqrt(areaRatio) * densityFactor)
+    Math.round(props.count * Math.sqrt(areaRatio) * densityFactor),
   );
 
   // 初始化Web Worker - 现在在onMounted中直接调用
@@ -168,7 +153,7 @@ onMounted(() => {
   startAnimation();
 
   // 仅在开发环境输出调试信息
-  if (process.env.NODE_ENV === "development") {
+  if (import.meta.env.DEV) {
     console.log("星空背景初始化完成，星星数量:", stars.value.length);
   }
 });
@@ -347,11 +332,11 @@ function setInitialCanvasSize() {
   const areaRatio = (viewportWidth * viewportHeight) / (1920 * 1080);
 
   // 记录调试信息
-  if (process.env.NODE_ENV === "development") {
+  if (import.meta.env.DEV) {
     console.log(
       `视口尺寸: ${viewportWidth}x${viewportHeight}, 面积比例: ${areaRatio.toFixed(
-        2
-      )}`
+        2,
+      )}`,
     );
   }
 
@@ -359,7 +344,7 @@ function setInitialCanvasSize() {
   const densityFactor = 1.5; // 增加密度系数
   const adjustedCount = Math.max(
     120, // 提高最小星星数量
-    Math.round(props.count * Math.sqrt(areaRatio) * densityFactor)
+    Math.round(props.count * Math.sqrt(areaRatio) * densityFactor),
   );
 
   // 获取上下文
@@ -403,7 +388,7 @@ function setInitialCanvasSize() {
           star,
           starsCtx.value as CanvasRenderingContext2D,
           undefined,
-          perspective
+          perspective,
         );
       });
     }
@@ -470,9 +455,9 @@ function initializeStars(count = props.count) {
   const canvasHeight = 1080;
 
   // 记录调试信息
-  if (process.env.NODE_ENV === "development") {
+  if (import.meta.env.DEV) {
     console.log(
-      `初始化星星，画布尺寸: ${canvasWidth}x${canvasHeight}, 星星数量: ${count}`
+      `初始化星星，画布尺寸: ${canvasWidth}x${canvasHeight}, 星星数量: ${count}`,
     );
   }
 
@@ -485,13 +470,13 @@ function initializeStars(count = props.count) {
       canvas,
       1, // 使用固定的DPR=1
       count,
-      performanceMode
-    ) * densityFactor
+      performanceMode,
+    ) * densityFactor,
   );
 
   // 检测当前季节，添加季节性特效
   const currentSeason = detectSeason();
-  if (process.env.NODE_ENV === "development") {
+  if (import.meta.env.DEV) {
     console.log(`当前季节: ${currentSeason || "无特殊季节"}`);
   }
 
@@ -522,11 +507,11 @@ function initializeStars(count = props.count) {
   const specialEffectType = effect.type;
 
   // 仅在开发环境输出特效信息
-  if (process.env.NODE_ENV === "development") {
+  if (import.meta.env.DEV) {
     console.log(
       `季节: ${currentSeason}, 特效类型: ${specialEffectType}, 特效比例: ${specialEffectRatio.toFixed(
-        2
-      )}, 密度因子: ${effectDensityFactor.toFixed(2)}`
+        2,
+      )}, 密度因子: ${effectDensityFactor.toFixed(2)}`,
     );
   }
 
@@ -671,7 +656,7 @@ function animate(currentTime = 0) {
       // 重启动画
       startAnimation();
 
-      if (process.env.NODE_ENV === "development") {
+      if (import.meta.env.DEV) {
         console.log(`星星数量过渡完成: ${targetStarCount}`);
       }
 
@@ -680,7 +665,7 @@ function animate(currentTime = 0) {
 
     // 计算当前帧应该有的星星数量
     const currentTargetCount = Math.round(
-      stars.value.length + (targetStarCount - stars.value.length) * progress
+      stars.value.length + (targetStarCount - stars.value.length) * progress,
     );
 
     // 只有当数量变化时才更新
@@ -694,12 +679,12 @@ function animate(currentTime = 0) {
         removeStars(stars.value.length - currentTargetCount);
       }
 
-      if (process.env.NODE_ENV === "development" && Math.random() < 0.05) {
+      if (import.meta.env.DEV && Math.random() < 0.05) {
         // 只记录大约5%的帧，避免日志过多
         console.log(
           `星星数量过渡中: ${
             stars.value.length
-          } / ${targetStarCount} (${Math.round(progress * 100)}%)`
+          } / ${targetStarCount} (${Math.round(progress * 100)}%)`,
         );
       }
     }
@@ -751,11 +736,11 @@ function animate(currentTime = 0) {
     fps = fpsHistory.reduce((sum, value) => sum + value, 0) / fpsHistory.length;
 
     // 只在开发模式下输出日志
-    if (process.env.NODE_ENV === "development") {
+    if (import.meta.env.DEV) {
       console.log(
         `当前FPS: ${Math.round(fps)}, 性能模式: ${performanceMode}, 星星数量: ${
           stars.value.length
-        }`
+        }`,
       );
     }
 
@@ -771,7 +756,7 @@ function animate(currentTime = 0) {
       fps,
       performanceMode,
       stabilizationPeriod,
-      fpsHistory
+      fpsHistory,
     );
 
     performanceMode = newPerformanceMode;
@@ -792,15 +777,15 @@ function animate(currentTime = 0) {
       const densityFactor = 1.5; // 使用更高的密度系数
       const idealCount = Math.max(
         120, // 提高最小星星数量
-        Math.round(props.count * Math.sqrt(areaRatio) * densityFactor)
+        Math.round(props.count * Math.sqrt(areaRatio) * densityFactor),
       );
 
       // 如果当前星星数量与理想数量差距较大，触发重新初始化
       const countDiff = Math.abs(stars.value.length - idealCount);
       if (countDiff > idealCount * 0.3) {
-        if (process.env.NODE_ENV === "development") {
+        if (import.meta.env.DEV) {
           console.log(
-            `星星数量需要调整: ${stars.value.length} -> ${idealCount}`
+            `星星数量需要调整: ${stars.value.length} -> ${idealCount}`,
           );
         }
         handleResize();
@@ -964,7 +949,6 @@ function addStars(count: number) {
   if (!canvas) return;
 
   const canvasWidth = 1920;
-  const canvasHeight = 1080;
 
   // 检测当前季节 - 较大窗口时降低特效密度防止GPU过载
   const currentSeason = detectSeason() || "spring";
@@ -1089,7 +1073,7 @@ function addStars(count: number) {
     if (isTransitioning.value) {
       const progress = Math.min(
         (performance.now() - transitionStartTime.value) / 500,
-        1
+        1,
       );
       adjustedOpacity = opacity * progress;
     }
@@ -1151,7 +1135,7 @@ function removeStars(count: number) {
       // 一次移除较少的星星，其余在下一帧处理
       stars.value = stars.value.slice(
         0,
-        stars.value.length - Math.ceil(count * 0.3)
+        stars.value.length - Math.ceil(count * 0.3),
       );
       return;
     }

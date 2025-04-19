@@ -1,4 +1,5 @@
-module.exports = {
+import { defineConfig } from "cz-git";
+export default defineConfig({
   // 继承的规则
   extends: ["@commitlint/config-conventional"],
   // @see: https://commitlint.js.org/#/reference-rules
@@ -21,6 +22,8 @@ module.exports = {
         "ci", // 修改 CI 配置、脚本
         "revert", // 回滚 commit
         "chore", // 对构建过程或辅助工具和库的更改（不影响源文件、测试用例）
+        "i18n", // 国际化相关的更改
+        "wip", // 进行中的工作
       ],
     ],
   },
@@ -52,26 +55,45 @@ module.exports = {
         { value: "ci",       name: "集成:     🎡  修改 CI 配置、脚本",  emoji: ":ferris_wheel:"},
         { value: "revert",   name: "回退:     ⏪️  回滚 commit",emoji: ":rewind:"},
         { value: "chore",    name: "其他:     🔨  对构建过程或辅助工具和库的更改（不影响源文件、测试用例）", emoji: ":hammer:"},
+        { value: "i18n",     name: "国际化:   🌐  国际化相关的更改", emoji: ":globe_with_meridians:" },
+        { value: "wip",      name: "进行中:   🚧  进行中的工作", emoji: ":construction:" },
       ],
     useEmoji: true,
     emojiAlign: "center",
-    useAI: false,
+    useAI: true,
+    aiModel: "deepseek-chat",
     aiNumber: 1,
+    aiQuestionCB: ({ maxSubjectLength, diff }) => {
+      return `用完整句子为以下 Git diff 代码写一个有见解并简洁的 Git 中文提交消息，不加任何前缀，并且内容不能超过 ${maxSubjectLength} 个字符: \`\`\`diff\n${diff}\n\`\`\``;
+    },
     themeColorCode: "",
-    scopes: [],
+    scopes: [
+      { name: "components", description: "组件相关" },
+      { name: "utils", description: "工具函数相关" },
+      { name: "styles", description: "样式相关" },
+      { name: "hooks", description: "钩子函数相关" },
+      { name: "api", description: "接口相关" },
+      { name: "store", description: "状态管理相关" },
+      { name: "router", description: "路由相关" },
+      { name: "config", description: "配置文件相关" },
+      { name: "assets", description: "静态资源相关" },
+    ],
     allowCustomScopes: true,
     allowEmptyScopes: true,
     customScopesAlign: "bottom",
     customScopesAlias: "custom",
     emptyScopesAlias: "empty",
     upperCaseSubject: false,
-    markBreakingChangeMode: false,
+    markBreakingChangeMode: true,
     allowBreakingChanges: ["feat", "fix"],
     breaklineNumber: 100,
     breaklineChar: "|",
     skipQuestions: [],
     issuePrefixes: [
       { value: "closed", name: "closed:   ISSUES has been processed" },
+      { value: "fix", name: "fix:      修复了相关问题" },
+      { value: "ref", name: "ref:      引用相关问题" },
+      { value: "relates", name: "relates:  与问题相关" },
     ],
     customIssuePrefixAlign: "top",
     emptyIssuePrefixAlias: "skip",
@@ -79,13 +101,24 @@ module.exports = {
     allowCustomIssuePrefix: true,
     allowEmptyIssuePrefix: true,
     confirmColorize: true,
-    maxHeaderLength: Infinity,
-    maxSubjectLength: Infinity,
-    minSubjectLength: 0,
-    scopeOverrides: undefined,
-    defaultBody: "",
+    maxHeaderLength: 100,
+    maxSubjectLength: 100,
+    minSubjectLength: 3,
+    scopeOverrides: {
+      fix: [
+        { name: "bug", description: "错误修复" },
+        { name: "security", description: "安全问题" },
+        { name: "performance", description: "性能问题" },
+      ],
+      feat: [
+        { name: "ui", description: "用户界面" },
+        { name: "api", description: "接口功能" },
+        { name: "auth", description: "认证功能" },
+      ],
+    },
+    defaultBody: "本次提交解决的问题：\n\n实现方式：",
     defaultIssues: "",
     defaultScope: "",
     defaultSubject: "",
   },
-};
+});

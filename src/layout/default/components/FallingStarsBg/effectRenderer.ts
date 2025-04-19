@@ -1,5 +1,3 @@
-import { RGBColor } from "./types";
-
 /**
  * 绘制雪花
  */
@@ -9,7 +7,6 @@ export function drawSnowflake(
   y: number,
   size: number,
   opacity: number,
-  _rgb: RGBColor // 使用下划线前缀表示未使用的参数
 ) {
   // 增大雪花尺寸，使其更加明显
   const armLength = size * 1.8; // 增大臂长
@@ -46,7 +43,7 @@ export function drawSnowflake(
     context.moveTo(branchStartX, branchStartY);
     context.lineTo(
       branchStartX + Math.cos(branchAngle1) * branchLength,
-      branchStartY + Math.sin(branchAngle1) * branchLength
+      branchStartY + Math.sin(branchAngle1) * branchLength,
     );
     context.stroke();
 
@@ -55,7 +52,7 @@ export function drawSnowflake(
     context.moveTo(branchStartX, branchStartY);
     context.lineTo(
       branchStartX + Math.cos(branchAngle2) * branchLength,
-      branchStartY + Math.sin(branchAngle2) * branchLength
+      branchStartY + Math.sin(branchAngle2) * branchLength,
     );
     context.stroke();
 
@@ -75,7 +72,7 @@ export function drawSnowflake(
     context.moveTo(branch1EndX, branch1EndY);
     context.lineTo(
       branch1EndX + Math.cos(branchAngle1) * secondBranchLength * 0.7,
-      branch1EndY + Math.sin(branchAngle1) * secondBranchLength * 0.7
+      branch1EndY + Math.sin(branchAngle1) * secondBranchLength * 0.7,
     );
     context.stroke();
 
@@ -84,7 +81,7 @@ export function drawSnowflake(
     context.moveTo(branch2EndX, branch2EndY);
     context.lineTo(
       branch2EndX + Math.cos(branchAngle2) * secondBranchLength * 0.7,
-      branch2EndY + Math.sin(branchAngle2) * secondBranchLength * 0.7
+      branch2EndY + Math.sin(branchAngle2) * secondBranchLength * 0.7,
     );
     context.stroke();
   }
@@ -118,7 +115,6 @@ export function drawSakura(
   y: number,
   size: number,
   opacity: number,
-  _rgb: RGBColor // 使用下划线前缀表示未使用的参数
 ) {
   // 增大樱花尺寸，使其更加明显
   const petalCount = 5; // 五片花瓣
@@ -148,7 +144,7 @@ export function drawSakura(
       petalWidth * 0.5,
       petalLength * 0.7,
       0,
-      petalLength
+      petalLength,
     );
     context.bezierCurveTo(
       -petalWidth * 0.5,
@@ -156,7 +152,7 @@ export function drawSakura(
       -petalWidth * 0.4,
       petalLength * 0.3,
       0,
-      0
+      0,
     );
 
     context.fill();
@@ -195,7 +191,6 @@ export function drawLeaf(
   y: number,
   size: number,
   opacity: number,
-  _rgb: RGBColor // 使用下划线前缀表示未使用的参数
 ) {
   // 简化位置坐标计算
   const posX = Math.round(x);
@@ -215,7 +210,7 @@ export function drawLeaf(
     `rgba(165, 42, 42, ${opacity})`, // 棕色
   ];
   const colorIndex = Math.abs(
-    Math.floor((posX * 13 + posY * 17) % autumnColors.length)
+    Math.floor((posX * 13 + posY * 17) % autumnColors.length),
   );
   const fillColor = autumnColors[colorIndex];
   const strokeColor = `rgba(139, 69, 19, ${opacity * 1.2})`; // 深棕色
@@ -249,7 +244,7 @@ export function drawLeaf(
     leafWidth * 0.7,
     -leafLength * 0.3, // 控制点2
     0,
-    -leafLength * 0.5 // 终点（叶尖）
+    -leafLength * 0.5, // 终点（叶尖）
   );
 
   // 左侧曲线（镜像）
@@ -259,7 +254,7 @@ export function drawLeaf(
     -leafWidth * 0.8,
     leafLength * 0.1, // 控制点2
     0,
-    leafLength * 0.3 // 终点回到起点
+    leafLength * 0.3, // 终点回到起点
   );
 
   // 填充和描边
@@ -294,7 +289,7 @@ export function drawLeaf(
       -veinLength * 0.6,
       veinY - veinLength * 0.2,
       -veinLength,
-      veinY - veinLength * 0.1
+      veinY - veinLength * 0.1,
     );
     context.stroke();
 
@@ -305,7 +300,7 @@ export function drawLeaf(
       veinLength * 0.6,
       veinY - veinLength * 0.2,
       veinLength,
-      veinY - veinLength * 0.1
+      veinY - veinLength * 0.1,
     );
     context.stroke();
   }

@@ -1,4 +1,5 @@
-import { detectDeviceType } from './utils';
+import { BatteryManager } from "@vueuse/core";
+import { detectDeviceType } from "./utils";
 
 /**
  * 检测设备初始性能并设置合适的性能模式
@@ -26,16 +27,21 @@ export function checkInitialPerformance(): number {
 
   // 检测是否使用电池
   // 使用类型断言解决电池API的类型问题
-  const nav = navigator as any;
+  const nav = navigator as unknown as {
+    getBattery: () => Promise<BatteryManager>;
+  };
   if (nav.getBattery) {
-    nav.getBattery().then((battery: any) => {
-      if (!battery.charging && battery.level < 0.3) {
-        // 如果电量低于30%且没有充电，降低质量以节省电量
-        performanceMode = Math.max(performanceMode, 1);
-      }
-    }).catch(() => {
-      // 如果无法获取电池信息，忽略错误
-    });
+    nav
+      .getBattery()
+      .then((battery) => {
+        if (!battery.charging && battery.level < 0.3) {
+          // 如果电量低于30%且没有充电，降低质量以节省电量
+          performanceMode = Math.max(performanceMode, 1);
+        }
+      })
+      .catch(() => {
+        // 如果无法获取电池信息，忽略错误
+      });
   }
 
   return performanceMode;
@@ -44,9 +50,13 @@ export function checkInitialPerformance(): number {
 /**
  * 根据性能模式更新目标帧率
  */
-export function updateTargetFPS(performanceMode: number, starCount: number): number {
+export function updateTargetFPS(
+  performanceMode: number,
+  starCount: number,
+): number {
   // 获取设备信息以更精确地调整帧率
-  const { isMobile, isLowEndDevice, isHighResolution, memory } = detectDeviceType();
+  const { isMobile, isLowEndDevice, isHighResolution, memory } =
+    detectDeviceType();
 
   // 根据性能模式调整帧率
   let targetFPS = 60; // 默认值
@@ -93,7 +103,7 @@ export function updateTargetFPS(performanceMode: number, starCount: number): num
   }
 
   // 仅在开发环境输出日志
-  if (process.env.NODE_ENV === 'development') {
+  if (process.env.NODE_ENV === "development") {
     console.log(`更新目标帧率: ${targetFPS}FPS, 性能模式: ${performanceMode}`);
   }
 
@@ -104,10 +114,10 @@ export function updateTargetFPS(performanceMode: number, starCount: number): num
  * 根据FPS调整性能模式
  */
 export function adjustPerformance(
-  fps: number, 
-  performanceMode: number, 
+  fps: number,
+  performanceMode: number,
   stabilizationPeriod: number,
-  fpsHistory: number[]
+  fpsHistory: number[],
 ): {
   newPerformanceMode: number;
   newStabilizationPeriod: number;
@@ -122,33 +132,33 @@ export function adjustPerformance(
   // 如果处于稳定期，不调整性能模式
   if (stabilizationPeriod > 0) {
     newStabilizationPeriod--;
-    return { 
-      newPerformanceMode, 
-      newStabilizationPeriod, 
-      needsFullRedraw 
+    return {
+      newPerformanceMode,
+      newStabilizationPeriod,
+      needsFullRedraw,
     };
   }
 
   // 确保有足够的样本进行决策
   if (fpsHistory.length < 3) {
-    return { 
-      newPerformanceMode, 
-      newStabilizationPeriod, 
-      needsFullRedraw 
+    return {
+      newPerformanceMode,
+      newStabilizationPeriod,
+      needsFullRedraw,
     };
   }
 
   // 性能提升：如果FPS持续很高并且当前不是高质量模式
   if (fps > 55 && performanceMode > 0) {
     newPerformanceMode--;
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env.NODE_ENV === "development") {
       console.log(`性能足够好，提升质量到模式 ${newPerformanceMode}`);
     }
   }
   // 性能下降：如果FPS持续较低，降低质量
   else if (fps < 30 && performanceMode < 2) {
     newPerformanceMode++;
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env.NODE_ENV === "development") {
       console.log(`性能不足，降低质量到模式 ${newPerformanceMode}`);
     }
   }
@@ -161,6 +171,6 @@ export function adjustPerformance(
   return {
     newPerformanceMode,
     newStabilizationPeriod,
-    needsFullRedraw
+    needsFullRedraw,
   };
 }

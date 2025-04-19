@@ -1,4 +1,4 @@
-import { RGBColor } from './types';
+import { RGBColor } from "./types";
 
 // 缓存默认颜色值，避免重复计算
 const defaultStarColor: RGBColor = { r: 100, g: 100, b: 100 }; // 深灰色星星
@@ -34,12 +34,15 @@ export function parseColor(color: string): RGBColor | null {
   let result = null;
 
   // 处理十六进制颜色
-  if (color.startsWith('#')) {
+  if (color.startsWith("#")) {
     let hex = color.replace(/^#/, "");
 
     // 如果是短十六进制格式，展开为长格式
     if (hex.length === 3) {
-      hex = hex.split("").map(char => char + char).join("");
+      hex = hex
+        .split("")
+        .map((char) => char + char)
+        .join("");
     }
 
     // 解析RGB值
@@ -51,7 +54,7 @@ export function parseColor(color: string): RGBColor | null {
     result = { r, g, b };
   }
   // 处理HSL颜色
-  else if (color.startsWith('hsl')) {
+  else if (color.startsWith("hsl")) {
     // 提取HSL值
     const match = color.match(/hsl\(\s*(\d+)\s*,\s*(\d+)%\s*,\s*(\d+)%\s*\)/);
     if (match) {
@@ -92,23 +95,23 @@ export function hslToRgb(h: number, s: number, l: number): RGBColor {
     const hue2rgb = (p: number, q: number, t: number) => {
       if (t < 0) t += 1;
       if (t > 1) t -= 1;
-      if (t < 1/6) return p + (q - p) * 6 * t;
-      if (t < 1/2) return q;
-      if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+      if (t < 1 / 6) return p + (q - p) * 6 * t;
+      if (t < 1 / 2) return q;
+      if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
       return p;
     };
 
     const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
     const p = 2 * l - q;
-    r = hue2rgb(p, q, h + 1/3);
+    r = hue2rgb(p, q, h + 1 / 3);
     g = hue2rgb(p, q, h);
-    b = hue2rgb(p, q, h - 1/3);
+    b = hue2rgb(p, q, h - 1 / 3);
   }
 
   const result = {
     r: Math.round(r * 255),
     g: Math.round(g * 255),
-    b: Math.round(b * 255)
+    b: Math.round(b * 255),
   };
 
   // 存入缓存
@@ -137,42 +140,44 @@ export function detectSeason(): string | null {
 
   // 使用查表法代替多个if-else，提高效率
   const seasons = [
-    'winter', // 0 - 一月
-    'winter', // 1 - 二月
-    'spring', // 2 - 三月
-    'spring', // 3 - 四月
-    'spring', // 4 - 五月
-    'summer', // 5 - 六月
-    'summer', // 6 - 七月
-    'summer', // 7 - 八月
-    'autumn', // 8 - 九月
-    'autumn', // 9 - 十月
-    'autumn', // 10 - 十一月
-    'winter'  // 11 - 十二月
+    "winter", // 0 - 一月
+    "winter", // 1 - 二月
+    "spring", // 2 - 三月
+    "spring", // 3 - 四月
+    "spring", // 4 - 五月
+    "summer", // 5 - 六月
+    "summer", // 6 - 七月
+    "summer", // 7 - 八月
+    "autumn", // 8 - 九月
+    "autumn", // 9 - 十月
+    "autumn", // 10 - 十一月
+    "winter", // 11 - 十二月
   ];
 
   cachedSeason = seasons[month];
   return cachedSeason;
- 
 }
 
 /**
  * 获取季节特效配置
  */
-export function getSeasonEffects(currentSeason: string | null, effectDensityFactor: number): {
+export function getSeasonEffects(
+  currentSeason: string | null,
+  effectDensityFactor: number,
+): {
   ratio: number;
   type: string;
 } {
   // 使用对象映射代替多个if-else，提高可读性和效率
-  const seasonEffects: Record<string, {ratio: number, type: string}> = {
-    'winter': {ratio: 0.15 * effectDensityFactor, type: 'snowflake'},
-    'spring': {ratio: 0.15 * effectDensityFactor, type: 'sakura'}, // 增加樱花比例
-    'autumn': {ratio: 0.15 * effectDensityFactor, type: 'leaf'}, // 显著增加秋叶比例
-    'summer': {ratio: 0, type: ''} // 夏季不显示特效
+  const seasonEffects: Record<string, { ratio: number; type: string }> = {
+    winter: { ratio: 0.15 * effectDensityFactor, type: "snowflake" },
+    spring: { ratio: 0.15 * effectDensityFactor, type: "sakura" }, // 增加樱花比例
+    autumn: { ratio: 0.15 * effectDensityFactor, type: "leaf" }, // 显著增加秋叶比例
+    summer: { ratio: 0, type: "" }, // 夏季不显示特效
   };
 
   // 获取当前季节的特效设置，如果没有则使用空特效
-  return currentSeason ? seasonEffects[currentSeason] : {ratio: 0, type: ''};
+  return currentSeason ? seasonEffects[currentSeason] : { ratio: 0, type: "" };
 }
 
 /**
@@ -186,9 +191,13 @@ export function detectDeviceType(): {
   isHighResolution: boolean;
 } {
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-  const isTablet = isMobile && Math.min(window.screen.width, window.screen.height) > 768;
-  const isLowEndDevice = navigator.hardwareConcurrency ? navigator.hardwareConcurrency <= 2 : false;
-  const memory = (navigator as any).deviceMemory || 4; // 默认4GB
+  const isTablet =
+    isMobile && Math.min(window.screen.width, window.screen.height) > 768;
+  const isLowEndDevice = navigator.hardwareConcurrency
+    ? navigator.hardwareConcurrency <= 2
+    : false;
+  const memory =
+    (navigator as unknown as { deviceMemory: number }).deviceMemory || 4; // 默认4GB
 
   // 检测屏幕分辨率
   const screenWidth = window.screen.width * (window.devicePixelRatio || 1);
@@ -199,6 +208,6 @@ export function detectDeviceType(): {
     isTablet,
     isLowEndDevice,
     memory,
-    isHighResolution
+    isHighResolution,
   };
 }

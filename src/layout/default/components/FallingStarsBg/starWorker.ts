@@ -19,7 +19,6 @@ interface WorkerMessage {
 let stars: Star[] = [];
 let canvasWidth = 0;
 let canvasHeight = 0;
-let dpr = 1;
 let performanceMode = 0;
 
 // 初始化星星
@@ -60,7 +59,7 @@ self.onmessage = (e: MessageEvent<WorkerMessage>) => {
   if (type === "init" && data) {
     canvasWidth = data.canvasWidth;
     canvasHeight = data.canvasHeight;
-    dpr = data.dpr;
+    // dpr = data.dpr;
     performanceMode = data.performanceMode;
     initializeBasicStars(data.stars.length);
   } else if (type === "update") {

@@ -22,6 +22,11 @@ export default defineConfig(async () => ({
     AutoImport({
       imports: ["vue", "@vueuse/core"],
       dts: "src/auto-imports.d.ts",
+      eslintrc: {
+        enabled: true,
+        filepath: "./.eslintrc-auto-import.json",
+        globalsPropValue: "readonly",
+      },
     }),
     Components({
       dirs: ["src/components"],
