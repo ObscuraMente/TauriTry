@@ -21,7 +21,7 @@ rl.question("请输入您的 DeepSeek API 密钥: ", (apiKey) => {
     );
     console.log("已成功配置 DeepSeek API 密钥!");
     console.log(
-      '您现在可以使用 "npm run cz" 或 "npx czg" 命令来生成 AI 辅助的提交信息。',
+      '您现在可以使用 "npm run commit" 或 "npx czg" 命令来生成 AI 辅助的提交信息。',
     );
   } catch (error) {
     console.error("配置 DeepSeek API 密钥时出错:", error.message);
